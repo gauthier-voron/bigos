@@ -1,0 +1,55 @@
+iDRAC6 setup on an AMD 48 Magny Cours
+=====================================
+
+The DRAC (Dell Remote Access Control) is a second computer, physically
+different of the main, powerfull computer.  Actually it is not even on
+the same power supply than the main computer, so even if the Magny
+Cours is not powered, the DRAC still runs.
+
+This auxiliary computer is used to perform monitoring and remote management of
+the main one and so, can avoid you to go upstairs to reboot it when it crashes.
+You can also use it to control what happens from the POST to the boot process,
+which can be usefull for, for instance, control what kernel select on GRUB.
+
+
+Setting Up iDRAC6
+-----------------
+
+This document talks specifically about the iDRAC6 because it was the version
+installed on the computers I was working on. The process should be more or
+less the same with other versions.
+
+First you need to have a physical access to the computer and to reboot it.
+The step in the boot process should be as following:
+1- the computer performs the POST
+2- the computer initialize the iDRAC6
+3- the computer ask you if you want to access configuration menus:
+   - System Setup
+   - BIOS Boot Configuration
+   - PXE Boot
+   - ...
+4- the computer probe the hard drives
+5- the computer ask you if you want to configure iDRAC6
+6- the computer try to boot on several devices according the BIOS defined
+   order
+
+The first thing to do is to configure iDRAC6 at step 5. To do this,
+the computer asks to type <Ctrl-E> or equivalent.  There is two
+sections we are interrested in: the "IPMI Control" which you have to
+enable, and the "Network IP Configuration" in which you have to
+configure properly the IP Address, Netmask and Gateway.  Remember the
+DRAC is a physically different computer so it have a separated network
+interface, so make sure it is connected to the network and if you
+choose static IP configuration, then set a different IP address than
+the main computer.  For the Netmask and Gateway, the one used by the
+main computer should be fine.
+
+Before to validate changes, you also have to modify another section: the
+"User Settings" to make sure you have a user configured with a password (be
+carefull, the password you type is in qwerty).
+
+Now you can continue the boot and check if the DRAC is correctly set up with
+a web browser by connecting to the previously configured DRAC IP address.
+If your configuration worked, you should see a web interface diplayed (slowly,
+the auxiliary computer is not very powerfull) you can connect on by entering
+the previoulsy given login/password.
