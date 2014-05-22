@@ -53,3 +53,41 @@ a web browser by connecting to the previously configured DRAC IP address.
 If your configuration worked, you should see a web interface diplayed (slowly,
 the auxiliary computer is not very powerfull) you can connect on by entering
 the previoulsy given login/password.
+
+
+Setting Up Serial Redirection
+-----------------------------
+
+By now, you should be able to do several things using the web interface.
+For instance, you can control the power supply of the computer, and so, to
+shutdown, boot or reboot the computer, even if its OS crashes.
+However, you do not have any control on the boot process yet. For this you
+have to enable the serial redirection. The main computer is able to redirect
+the serial output to the DRAC which can remotely send it to you.
+
+To enable this functionnality, you have, once again to access physically to
+the computer to activate some options in the BIOS (or System Setup on my
+computer).
+Once you are on the right menu, you have to go in the submenu
+"Serial Communication" and set the "Console Redirection" item to "On with
+Console Redirection via COM2", set the "Baud rate" to 115200 and to disable
+the "Redirection after Boot".
+
+Now in the DRAC web interface, in the "iDRAC Parameters" section
+"Network/Security" subsection "Serial", you need to activate the "IPMI Serial"
+(or deactivate the "RAC serial") and set the baud rate to "115.2 kb/s".
+
+Finally, you have to modify the GRUB configuration (or do equivalent changes in
+yout bootloader) by writing in the "/etc/default/grub" file:
+- add the following kernel option: "console=ttyS1,115200"
+  > GRUB_CMDLINE_LINUX="console=ttyS1,115200"
+- disable the graphical terminal by setting it to the serial console
+  > GRUB_TERMINAL=serial
+- specify the right baud rate for the serial terminal
+  > GRUB_SERIAL_COMMAND="serial --unit=1 --speed=115200"
+Now you can update your grub config "grub-mkconfig -o /boot/grub/grub.cfg"
+
+The setup is now done, to access the boot console, you can connect to the
+DRAC IP by ssh (ssh root@<my DRAC IP>), you should access to a weird console
+with a prompt like "/admin1>". You can now type "console com2" and after a
+few seconds you have access to the serial console.
