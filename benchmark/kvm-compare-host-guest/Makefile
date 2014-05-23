@@ -14,7 +14,7 @@ times.pdf: times.pl $(patsubst %, %-I,  $(RESULTS)) \
 
 parsec-3.0/pkgs/kernels/streamcluster/inst/amd64-linux.gcc/bin/streamcluster: \
   parsec-3.0
-	cd $< ; source ./env.sh ; parsecmgmt -a build -p streamcluster
+	/bin/bash -c "cd $< ; source ./env.sh ; parsecmgmt -a build -p streamcluster"
 
 parsec-3.0: parsec-3.0-core.tar.gz
 	tar -xzf $^
