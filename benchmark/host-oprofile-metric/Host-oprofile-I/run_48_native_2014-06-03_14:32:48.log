@@ -1,0 +1,23 @@
+[PARSEC] [========== PARSEC 3.0-beta-20130728 RUN LOGFILE ==========]
+
+[PARSEC] Run with amd64-linux.gcc binaries and input native started on Tue Jun 3 14:32:48 CEST 2014.
+[PARSEC] Benchmarks to run:  parsec.streamcluster
+
+[PARSEC] [========== Running benchmark parsec.streamcluster [1] ==========]
+[PARSEC] Deleting old run directory.
+[PARSEC] Setting up run directory.
+[PARSEC] No archive for input 'native' available, skipping input setup.
+[PARSEC] Running 'time /home/gauthier/bigos/benchmark/host-oprofile-metric/parsec-3.0/pkgs/kernels/streamcluster/inst/amd64-linux.gcc/bin/streamcluster 10 20 128 1000000 200000 5000 none output.txt 48':
+[PARSEC] [---------- Beginning of output ----------]
+PARSEC Benchmark Suite Version 3.0-beta-20130728
+read 200000 points
+read 200000 points
+read 200000 points
+read 200000 points
+read 200000 points
+
+real	2m52.586s
+user	52m22.740s
+sys	6m16.360s
+[PARSEC] [----------    End of output    ----------]
+[PARSEC] Done.

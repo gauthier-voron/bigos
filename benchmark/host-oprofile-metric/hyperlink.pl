@@ -20,57 +20,55 @@ unless (@ARGV) {
 ($fd, $path) = tempfile;
 print STDERR "formatting data in '$path'...";
 
-print $fd "name\tfirst-touch\tinterleaved";
+print $fd "name\thyper0NI\thyper3NI\thyper0I\thyper3I";
 
 for (@ARGV) {
     next unless (-d "$_-I" && -d "$_-NI");
     print STDERR "processing $_";
 
-    my $real = 0;
-    my $user = 0;
-    my $sys  = 0;
+    my $hyp0 = 0;
+    my $hyp3 = 0;
     my $tot  = 0;
     
-    foreach (split '\n', `ls $_-NI/run*.log`) {
+    foreach (split '\n', `ls $_-NI/opreport*.log`) {
 	open my $fd, '<', $_ || die "cannot open '$_': $!";
 
 	while (<$fd>) {
-	    /^\s*(\w+)\s*(\d+)m(\d+)\.(\d+)s\s*$/ || next;
-	    eval "\$$1 += $2 * 60 + $3.$4;";
+	    /^\s*(\d+)\s*([\d.]+)\s*(\d+)\s*([\d.]+)\s*streamcluster\s*$/ || next;
+	    $hyp0 += $1;
+	    $hyp3 += $3;
 	}
 
 	close $fd;
 	$tot += 1;
     }
 
-    $real /= $tot;
-    $user /= $tot;
-    $sys /= $tot;
+    $hyp0 /= $tot;
+    $hyp3 /= $tot;
 
-    printf $fd "$_\t$real\t";
+    printf $fd "$_\t$hyp0\t$hyp3\t";
 
-    $real = 0;
-    $user = 0;
-    $sys  = 0;
+    $hyp0 = 0;
+    $hyp3 = 0;
     $tot  = 0;
     
-    foreach (split '\n', `ls $_-I/run*.log`) {
+    foreach (split '\n', `ls $_-I/opreport*.log`) {
 	open my $fd, '<', $_ || die "cannot open '$_': $!";
 
 	while (<$fd>) {
-	    /^\s*(\w+)\s*(\d+)m(\d+)\.(\d+)s\s*$/ || next;
-	    eval "\$$1 += $2 * 60 + $3.$4;";
+	    /^\s*(\d+)\s*([\d.]+)\s*(\d+)\s*([\d.]+)\s*streamcluster\s*$/ || next;
+	    $hyp0 += $1;
+	    $hyp3 += $3;
 	}
 
 	close $fd;
 	$tot += 1;
     }
 
-    $real /= $tot;
-    $user /= $tot;
-    $sys /= $tot;
+    $hyp0 /= $tot;
+    $hyp3 /= $tot;
 
-    print $fd "$real";
+    print $fd "$hyp0\t$hyp3";
 }
 
 close $fd;
@@ -94,7 +92,7 @@ set style data histogram
 set style fill solid border
 set style histogram clustered
 set terminal pdf
-plot for [COL=2:3] '$path' using COL:xticlabel(1) title columnheader
+plot for [COL=2:5] '$path' using COL:xticlabel(1) title columnheader
 GNUPLOT
 
 open $fd, '|-', 'gnuplot' || (unlink $path && die "$!");
