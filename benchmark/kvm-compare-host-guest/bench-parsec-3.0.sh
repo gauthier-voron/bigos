@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ $1 ] ; then
   mkdir -p $1-NI || exit 1

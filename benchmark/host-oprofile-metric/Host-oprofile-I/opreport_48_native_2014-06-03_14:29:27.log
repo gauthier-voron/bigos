@@ -1,0 +1,136 @@
+CPU: AMD64 family10, speed 2100.08 MHz (estimated)
+Counted HYPERTRANSPORT_LINK0_TRANSMIT_BANDWIDTH events (HyperTransport(tm) link 0 transmit bandwidth) with a unit mask of 0xbf (multiple flags) count 100000
+Counted HYPERTRANSPORT_LINK3_TRANSMIT_BANDWIDTH events (HyperTransport(tm) link 3 transmit bandwidth) with a unit mask of 0xbf (multiple flags) count 100000
+HYPERTRANSPORT...|HYPERTRANSPORT...|
+  samples|      %|  samples|      %|
+------------------------------------
+485683950 53.1612 122543820 53.7040 no-vmlinux
+353246429 38.6651  87096009 38.1692 streamcluster
+ 72401565  7.9248  17858012  7.8262 libpthread-2.13.so
+  2043324  0.2237    607033  0.2660 oprofiled
+   196968  0.0216     75613  0.0331 libc-2.13.so
+    10727  0.0012      1228 5.4e-04 bash
+     7360 8.1e-04         0       0 libjvm.so
+     3473 3.8e-04       468 2.1e-04 python2.7
+     3182 3.5e-04         0       0 javac
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	      794 24.9529         0       0 anon (tgid:52962 range:0x7fc810393000-0x7fc810603000)
+	      767 24.1043         0       0 anon (tgid:54403 range:0x7f1cf340a000-0x7f1cf367a000)
+	      753 23.6644         0       0 anon (tgid:53735 range:0x7fe3f8ac5000-0x7fe3f8d35000)
+	      743 23.3501         0       0 anon (tgid:52138 range:0x7f86e0a99000-0x7f86e0d09000)
+	       40  1.2571         0       0 [vdso] (tgid:53735 range:0x7fff075c7000-0x7fff075c9000)
+	       36  1.1314         0       0 [vdso] (tgid:54403 range:0x7fffe0ffe000-0x7fffe1000000)
+	       25  0.7857         0       0 [vdso] (tgid:52138 range:0x7fff6a6bb000-0x7fff6a6bd000)
+	       24  0.7542         0       0 [vdso] (tgid:52962 range:0x7fff0dd6a000-0x7fff0dd6c000)
+     3095 3.4e-04       407 1.8e-04 ld-2.13.so
+     1507 1.6e-04         0       0 libz.so.1.2.3.4
+      604 6.6e-05         0       0 irqbalance
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	      602 99.6689         0       0 irqbalance
+	        2  0.3311         0       0 [vdso] (tgid:1542 range:0x7fff25193000-0x7fff25195000)
+      555 6.1e-05        61 2.7e-05 libglib-2.0.so.0.3000.0
+      386 4.2e-05        91 4.0e-05 libm-2.13.so
+      290 3.2e-05         0       0 libzip.so
+      257 2.8e-05         0       0 opreport
+      252 2.8e-05         2 8.8e-07 libstdc++.so.6.0.16
+      251 2.7e-05        87 3.8e-05 less
+      246 2.7e-05       229 1.0e-04 sas2ircu
+      232 2.5e-05        71 3.1e-05 libcrypto.so.1.0.0
+      227 2.5e-05        97 4.3e-05 libncursesw.so.5.9
+      210 2.3e-05        50 2.2e-05 dbus-daemon
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	      209 99.5238        50 100.000 dbus-daemon
+	        1  0.4762         0       0 [vdso] (tgid:1455 range:0x7fff6cbfe000-0x7fff6cc00000)
+      160 1.8e-05       155 6.8e-05 libcrypt-2.13.so
+      158 1.7e-05         2 8.8e-07 rsyslogd
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	      134 84.8101         2 100.000 rsyslogd
+	       24 15.1899         0       0 [vdso] (tgid:1430 range:0x7ffff77fe000-0x7ffff7800000)
+      101 1.1e-05        15 6.6e-06 libdbus-1.so.3.5.7
+      101 1.1e-05        84 3.7e-05 sshd
+       95 1.0e-05        84 3.7e-05 htop
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	       94 98.9474        83 98.8095 htop
+	        1  1.0526         1  1.1905 [vdso] (tgid:7337 range:0x7fff269b7000-0x7fff269b9000)
+       92 1.0e-05        27 1.2e-05 libtinfo.so.5.9
+       92 1.0e-05        20 8.8e-06 libgobject-2.0.so.0.3000.0
+       52 5.7e-06        17 7.5e-06 dash
+       51 5.6e-06         9 3.9e-06 libgio-2.0.so.0.3000.0
+       48 5.3e-06         3 1.3e-06 basename
+       47 5.1e-06         5 2.2e-06 watch
+       15 1.6e-06         3 1.3e-06 grep
+       13 1.4e-06         0       0 libverify.so
+       12 1.3e-06         0       0 g++-4.6
+       12 1.3e-06         0       0 libjava.so
+       11 1.2e-06         0       0 ls
+       11 1.2e-06         0       0 libdl-2.13.so
+       10 1.1e-06         8 3.5e-06 libpam.so.0.83.0
+       10 1.1e-06         0       0 sudo
+        9 9.9e-07         3 1.3e-06 libncurses.so.5.9
+        9 9.9e-07         0       0 gcc-4.6
+        8 8.8e-07         0       0 init
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	        7 87.5000         0       0 init
+	        1 12.5000         0       0 [vdso] (tgid:1 range:0x7fffdf5fe000-0x7fffdf600000)
+        7 7.7e-07         1 4.4e-07 libnss_nis-2.13.so
+        7 7.7e-07         5 2.2e-06 NetworkManager
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	        6 85.7143         5 100.000 NetworkManager
+	        1 14.2857         0       0 [vdso] (tgid:1469 range:0x7fffa837b000-0x7fffa837d000)
+        7 7.7e-07         1 4.4e-07 console-kit-daemon
+	HYPERTRANSPORT...|HYPERTRANSPORT...|
+	  samples|      %|  samples|      %|
+	------------------------------------
+	        6 85.7143         1 100.000 console-kit-daemon
+	        1 14.2857         0       0 [vdso] (tgid:1819 range:0x7fffd07fe000-0x7fffd0800000)
+        6 6.6e-07         0       0 libnss_compat-2.13.so
+        6 6.6e-07         1 4.4e-07 imuxsock.so
+        5 5.5e-07         1 4.4e-07 libattr.so.1.1.0
+        5 5.5e-07         2 8.8e-07 libnsl-2.13.so
+        5 5.5e-07         0       0 libnss_files-2.13.so
+        5 5.5e-07         2 8.8e-07 librt-2.13.so
+        5 5.5e-07         2 8.8e-07 libselinux.so.1
+        5 5.5e-07         0       0 datetime.so
+        4 4.4e-07         0       0 sed
+        4 4.4e-07         0       0 expr
+        3 3.3e-07         3 1.3e-06 libresolv-2.13.so
+        3 3.3e-07         0       0 sort
+        3 3.3e-07         1 4.4e-07 libgthread-2.0.so.0.3000.0
+        2 2.2e-07         0       0 mkdir
+        2 2.2e-07         0       0 tee
+        2 2.2e-07         1 4.4e-07 libffi.so.6.0.0
+        1 1.1e-07         0       0 date
+        1 1.1e-07         0       0 sleep
+        1 1.1e-07         0       0 libnih.so.1.0.0
+        1 1.1e-07         0       0 pam_ck_connector.so
+        1 1.1e-07         0       0 udev-acl
+        1 1.1e-07         0       0 libnss_dns-2.13.so
+        1 1.1e-07         0       0 libssl.so.1.0.0
+        1 1.1e-07         1 4.4e-07 libutil-2.13.so
+        1 1.1e-07         0       0 pam_env.so
+        1 1.1e-07         0       0 pam_mail.so
+        1 1.1e-07         0       0 pam_permit.so
+        1 1.1e-07         0       0 cut
+        1 1.1e-07         0       0 libjli.so
+        1 1.1e-07         1 4.4e-07 libpolkit-gobject-1.so.0.0.0
+        1 1.1e-07         0       0 _sigchld.so
+        1 1.1e-07         0       0 libavahi-common.so.3.5.3
+        1 1.1e-07         0       0 libdbus-glib-1.so.2.2.0
+        1 1.1e-07         1 4.4e-07 libkrb5support.so.0.1
+        1 1.1e-07         0       0 avahi-daemon
+        1 1.1e-07         0       0 cron
+        0       0         1 4.4e-07 libcap.so.2.21
