@@ -1,5 +1,5 @@
 BENCH       := parsec-3.0/pkgs/kernels/streamcluster/inst/amd64-linux.gcc/bin/streamcluster
-RESULTS-INI := Host Dom0
+RESULTS-INI := Host
 RESULTS-DPI := DomU 2xDomU48 2xDomU24
 
 default: all
