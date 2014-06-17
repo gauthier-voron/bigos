@@ -4,8 +4,15 @@ INC := include/
 OBJ := obj/
 BIN := bin/
 
-ARCH    := intel/
 XEN-DIR := ~/xen-4.4/
+
+VENDOR  ?= $(firstword $(shell sed -nr 's/vendor_id[[:space:]]*: (.*)/\1/p' \
+                               /proc/cpuinfo))
+FAMILY  ?= $(firstword $(shell sed -nr 's/cpu family[[:space:]]*: (.*)/\1/p' \
+                               /proc/cpuinfo))
+MODEL   ?= $(firstword $(shell sed -nr 's/model[[:space:]]*: (.*)/\1/p' \
+                               /proc/cpuinfo))
+ARCH    := $(VENDOR)_$(FAMILY)_$(MODEL)
 
 CC      := gcc
 CCFLAGS := -Wall -Wextra
@@ -59,35 +66,37 @@ $(XEN-DIR)dist/install/boot/: $(shell find $(XEN) -name "*.c")
 	sudo reboot
 
 
-$(BIN)xenperf: $(patsubst $(SRC)%.c, $(OBJ)%.o, $(wildcard $(SRC)*.c)) \
-       $(patsubst $(SRC)$(ARCH)%.c, $(OBJ)%.o, $(wildcard $(SRC)$(ARCH)*.c)) \
-       | $(BIN)
+$(BIN)xenperf: $(patsubst $(SRC)%.c, $(OBJ)%.o, $(foreach subdir, $(SRC) \
+  $(SRC)$(VENDOR)/ $(SRC)$(VENDOR)/$(FAMILY)/ \
+  $(SRC)$(VENDOR)/$(FAMILY)/$(MODEL)/, $(wildcard $(subdir)*.c))) | $(BIN)
 	$(call cmd-print,  LD      $@)
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS)
 
 $(OBJ)%.o:
 	$(call cmd-print,  CC      $@) 
-	$(Q)$(CC) $(CCFLAGS) -c $< -o $@ -I$(INC)
+	$(Q)$(CC) $(CCFLAGS) -c $< -o $@ -I$(INC) -DVENDOR=$(VENDOR) \
+          -DFAMILY=$(FAMILY) -DMODEL=$(MODEL)
 
 
 ifeq ($(mode),build)
 
 -include .depends
 
-.depends: $(wildcard $(SRC)*.c) $(wildcard $(SRC)$(ARCH)*.c) \
-          $(wildcard $(INC)*.h)
-	$(call cmd-print,  MKDEP   $@)
-	$(Q)$(CC) -MM $(filter %.c, $^) -I$(INC) \
-        | sed -r 's/(.*):/$$(OBJ)\1:/' \
-        | sed -r 's/([^\\])[[:space:]]*$$/\1 | $$(OBJ)/' \
-        >$@
-
 endif
 
+.depends: $(foreach subdir, $(SRC) $(SRC)$(VENDOR)/ \
+  $(SRC)$(VENDOR)/$(FAMILY)/ $(SRC)$(VENDOR)/$(FAMILY)/$(MODEL)/, \
+  $(wildcard $(subdir)*.c)) $(wildcard $(INC)*.h)
+	$(call cmd-print,  MKDEP   $@)
+	$(Q)$(CC) -MM $(filter %.c, $^) -I$(INC) \
+        | sed ':x; /\\$$/ { N; s/\\\n[[:space:]]*//; tx }' \
+        | sed -r 's%^.*: $(SRC)(.*).c %$$(OBJ)\1.o: $$(SRC)\1.c %' \
+        | sed -r 's%^\$$\(OBJ\)(.*/)?(.*):(.*)%$$(OBJ)\1\2:\3 | $$(OBJ)\1%' \
+	> $@
 
-$(OBJ) $(BIN):
+%/:
 	$(call cmd-print,  MKDIR   $@)
-	$(Q)mkdir $@
+	$(Q)mkdir -p $@
 
 
 clean:

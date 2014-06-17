@@ -3,7 +3,6 @@
 
 
 #include "asm.h"
-#include "msr.h"
 
 
 int hypercall_channel_check(void);
