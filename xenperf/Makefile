@@ -92,9 +92,10 @@ endif
         | sed ':x; /\\$$/ { N; s/\\\n[[:space:]]*//; tx }' \
         | sed -r 's%^.*: $(SRC)(.*).c %$$(OBJ)\1.o: $$(SRC)\1.c %' \
         | sed -r 's%^\$$\(OBJ\)(.*/)?(.*):(.*)%$$(OBJ)\1\2:\3 | $$(OBJ)\1%' \
+        | sed -r 's/(.*) \| (.*)/\1 | \2\nDIR += \2/' \
 	> $@
 
-%/:
+$(sort $(DIR) $(OBJ) $(BIN)):
 	$(call cmd-print,  MKDIR   $@)
 	$(Q)mkdir -p $@
 
