@@ -65,8 +65,10 @@ static int check_coreinfo(void)
 		return -1;
 	}
 
-	printf("core count         %d\n", coreinfo.count);
-	printf("current core       %d\n", coreinfo.current);
+	printf("core count         %d\n", coreinfo.core_count);
+	printf("current core       %d\n", coreinfo.core_current);
+	printf("node count         %d\n", coreinfo.node_count);
+	printf("current node       %d\n", coreinfo.node_current);
 
 	return 0;
 }
@@ -138,7 +140,7 @@ static int run_counters(unsigned long evt, unsigned long umask)
 		return -1;
 	}
 
-	for (i=0; i<coreinfo.count; i++) {
+	for (i=0; i<coreinfo.core_count; i++) {
 		if (perfcnt_write(perfinfo.list[cnt], 0, i) < 0)
 			return -1;
 		if (perfcnt_enable(perfinfo.list[cnt], evt, umask, i) < 0)
@@ -161,7 +163,7 @@ static int run_counters(unsigned long evt, unsigned long umask)
 		}
 
 		printf("%lu.%09lu", sec, nsec);
-		for (i=0; i<coreinfo.count; i++) {
+		for (i=0; i<coreinfo.core_count; i++) {
 			pmc = perfcnt_read(perfinfo.list[cnt], i);
 
 			printf("\t%10lu", pmc);
@@ -193,7 +195,7 @@ static int run_counters(unsigned long evt, unsigned long umask)
 		tc = ts;
 	}
 
-	for (i=0; i<coreinfo.count; i++)
+	for (i=0; i<coreinfo.core_count; i++)
 		if (perfcnt_disable(perfinfo.list[cnt], i) < 0)
 			return -1;
 

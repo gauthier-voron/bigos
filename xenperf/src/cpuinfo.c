@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 #include <sched.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "asm.h"
 #include "cpuinfo.h"
@@ -57,19 +58,55 @@ int probe_cpuinfo(struct cpuinfo *dest)
 
 
 
+/* Will not work under xen since it masks the NUMA topology */
+__attribute__((weak)) int probe_nodeinfo(struct coreinfo *dest)
+{
+	FILE *f;
+	size_t size;
+	unsigned int core, ret;
+	char buffer[1024];
+	unsigned long count = 0;
+	const char *pattern = "/sys/devices/system/cpu/cpu%d/topology/core_id";
+
+	for (core=0; core<dest->core_count; core++) {
+		ret = snprintf(buffer, sizeof(buffer), pattern, core);
+		if (ret >= sizeof(buffer))
+			return -1;
+		
+		f = fopen(buffer, "r");
+		if (f == NULL)
+			return -1;
+
+		fseek(f, 0, SEEK_END);
+		size = ftell(f);
+		fseek(f, 0, SEEK_SET);
+
+		fread(buffer, sizeof(char), size, f);
+		fclose(f);
+
+		ret = atoi(buffer);
+		if (core == dest->core_current)
+			dest->node_current = ret;
+		if (ret > count)
+			count = count;
+	}
+	
+	dest->node_count = count + 1;
+	return 0;
+}
 
 int __attribute__((weak)) probe_coreinfo(struct coreinfo *dest)
 {
 	DIR *dir = opendir("/sys/devices/system/cpu");
 	struct dirent *dirent;
 
-	dest->count = -1;
-	dest->current = getcore();
+	dest->core_count = 1;
+	dest->core_current = getcore();
 
 	if (dir == NULL)
 		return -1;
 
-	dest->count = 0;
+	dest->core_count = 0;
 	while ((dirent = readdir(dir)) != NULL) {
 		if (dirent->d_name[0] != 'c')
 			continue;
@@ -79,8 +116,11 @@ int __attribute__((weak)) probe_coreinfo(struct coreinfo *dest)
 			continue;
 		if (dirent->d_name[3] < '0' || dirent->d_name[3] > '9')
 			continue;
-		dest->count++;
+		dest->core_count++;
 	}
+
+	if (probe_nodeinfo(dest) < 0)
+		return -1;
 
 	return 0;
 }

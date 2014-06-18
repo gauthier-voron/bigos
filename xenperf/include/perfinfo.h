@@ -9,9 +9,9 @@ typedef struct perfcnt *perfcnt_t;
 
 struct perfinfo
 {
-	int          hyper;
-	size_t       count;
-	perfcnt_t   *list;
+	int                hyper;
+	size_t             count;
+	const perfcnt_t   *list;
 };
 
 

@@ -15,8 +15,10 @@ int probe_cpuinfo(struct cpuinfo *dest);
 
 struct coreinfo
 {
-	unsigned int    count;
-	unsigned int    current;
+	unsigned int  core_count;
+	unsigned int  core_current;
+	unsigned int  node_count;
+	unsigned int  node_current;
 };
 
 int probe_coreinfo(struct coreinfo *dest);
