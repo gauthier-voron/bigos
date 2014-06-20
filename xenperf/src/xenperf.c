@@ -6,7 +6,9 @@
 #include <unistd.h>
 
 #include "asm.h"
+#include "common.h"
 #include "cpuinfo.h"
+#include "hypercall.h"
 #include "stringify.h"
 #include "perfinfo.h"
 
@@ -15,10 +17,14 @@
 #define GIGA                   (1000000000)
 #define COUNTER_CEIL           (1 << 28)
 
+#define EVENT                  (EVENT_NBREQT)
+#define UMASK                  (UMASK_NBREQT_CPUMEM | UMASK_NBREQT_LOCLOC)
+/* #define EVENT                  (EVENT_LLC) */
+/* #define UMASK                  (UMASK_LLC_MISS) */
+
 
 struct cpuinfo cpuinfo;
 struct coreinfo coreinfo;
-struct perfinfo perfinfo;
 
 
 static int check_cpuinfo(void)
@@ -73,21 +79,30 @@ static int check_coreinfo(void)
 	return 0;
 }
 
-static int check_perfinfo(void)
+static size_t check_perfcnt(const struct perfcnt **arr, size_t size)
 {
-	if (probe_perfinfo(&perfinfo) < 0) {
-		fprintf(stderr, "xenperf: cannot probe perfinfo\n");
+	size = probe_perfcnt(arr, size, EVENT);
+
+	if (size == 0) {
+		fprintf(stderr, "xenperf: no available performance counter\n");
+		return 0;
+	}
+
+	printf("found counters     %lu\n", size);
+
+	return size;
+}
+
+static int check_hypercall(void)
+{
+	if (hypercall_channel_check() < 0) {
+		fprintf(stderr, "xenperf: hypercall not enabled\n");
+		fprintf(stderr, "xenperf: please be sure to be in xen dom0\n");
+		fprintf(stderr, "xenperf: please be sure to patch your xen\n");
 		return -1;
 	}
 
-	printf("hypercall          %d\n", perfinfo.hyper);
-	printf("perfcnt count      %lu\n", perfinfo.count);
-
-	if (!perfinfo.hyper) {
-		fprintf(stderr, "xenperf: hypercall support not enabled\n");
-		fprintf(stderr, "xenperf: please patch your xen\n");
-		return -1;
-	}
+	printf("hypercall          1\n");
 
 	return 0;
 }
@@ -124,26 +139,20 @@ static int check_continue(void)
 }
 
 
-static int run_counters(unsigned long evt, unsigned long umask)
+static int run_counters(const struct perfcnt *perfcnt, unsigned long event,
+			unsigned long umask, unsigned int *cores,
+			size_t size)
 {
 	int updown = 0;
-	unsigned int i, cnt;
+	unsigned int i;
 	unsigned long pmc;
 	unsigned long sec = 0, nsec = 0;
 	struct timespec ts, tc;
 
-	for (cnt=0; cnt<perfinfo.count; cnt++)
-		if (perfcnt_has_event(perfinfo.list[cnt], evt))
-			break;
-	if (cnt == perfinfo.count) {
-		fprintf(stderr, "xenperf: unsupported event\n");
-		return -1;
-	}
-
-	for (i=0; i<coreinfo.core_count; i++) {
-		if (perfcnt_write(perfinfo.list[cnt], 0, i) < 0)
+	for (i=0; i<size; i++) {
+		if (perfcnt_write(perfcnt, 0, cores[i]) < 0)
 			return -1;
-		if (perfcnt_enable(perfinfo.list[cnt], evt, umask, i) < 0)
+		if (perfcnt_enable(perfcnt, event, umask, cores[i]) < 0)
 			return -1;
 	}
 
@@ -163,8 +172,8 @@ static int run_counters(unsigned long evt, unsigned long umask)
 		}
 
 		printf("%lu.%09lu", sec, nsec);
-		for (i=0; i<coreinfo.core_count; i++) {
-			pmc = perfcnt_read(perfinfo.list[cnt], i);
+		for (i=0; i<size; i++) {
+			pmc = perfcnt_read(perfcnt, cores[i]);
 
 			printf("\t%10lu", pmc);
 
@@ -173,7 +182,7 @@ static int run_counters(unsigned long evt, unsigned long umask)
 			else if (pmc < (COUNTER_CEIL / 4))
 				updown--;                     /* loop slower */
 
-			perfcnt_write(perfinfo.list[cnt], 0, i);
+			perfcnt_write(perfcnt, 0, cores[i]);
 		}
 		printf("\n");
 			
@@ -195,8 +204,8 @@ static int run_counters(unsigned long evt, unsigned long umask)
 		tc = ts;
 	}
 
-	for (i=0; i<coreinfo.core_count; i++)
-		if (perfcnt_disable(perfinfo.list[cnt], i) < 0)
+	for (i=0; i<size; i++)
+		if (perfcnt_disable(perfcnt, cores[i]) < 0)
 			return -1;
 
 	return 0;
@@ -205,11 +214,18 @@ static int run_counters(unsigned long evt, unsigned long umask)
 
 int main(void)
 {
+	const struct perfcnt *perfcnt;
+	unsigned int *coremap;
+	unsigned int *cores;
+	size_t i, j;
+
 	if (check_cpuinfo() < 0)
 		return EXIT_FAILURE;
 	if (check_coreinfo() < 0)
 		return EXIT_FAILURE;
-	if (check_perfinfo() < 0)
+	if (check_perfcnt(&perfcnt, 1) == 0)
+		return EXIT_FAILURE;
+	if (check_hypercall() < 0)
 		return EXIT_FAILURE;
 
 	if (configure_sighandler() < 0) {
@@ -218,7 +234,20 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	if (run_counters(EVT_UNHCCYC, 0) < 0)
+	coremap = alloca(sizeof(unsigned int) * coreinfo.core_count);
+	probe_coremap(coremap, coreinfo.core_count);
+
+	/* cores = alloca(sizeof(unsigned int) * coreinfo.core_count); */
+	/* for (i=0; i<coreinfo.core_count; i++) */
+	/* 	cores[i] = i; */
+
+	cores = alloca(sizeof(unsigned int) * coreinfo.node_count);
+	for (i=0, j=0; i<coreinfo.core_count; i++)
+		if (coremap[i] == j)
+			cores[j++] = i;
+
+	if (run_counters(perfcnt, EVENT, UMASK,
+			 cores, coreinfo.node_count) < 0)
 		return EXIT_FAILURE;
 	
 	return EXIT_SUCCESS;
