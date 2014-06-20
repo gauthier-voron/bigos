@@ -17,6 +17,7 @@ ARCH    := $(VENDOR)_$(FAMILY)_$(MODEL)
 CC      := gcc
 CCFLAGS := -Wall -Wextra
 LDFLAGS := -lxenctrl
+INCLUDE := -I$(INC)
 
 
 V ?= 1
@@ -74,7 +75,7 @@ $(BIN)xenperf: $(patsubst $(SRC)%.c, $(OBJ)%.o, $(foreach subdir, $(SRC) \
 
 $(OBJ)%.o:
 	$(call cmd-print,  CC      $@) 
-	$(Q)$(CC) $(CCFLAGS) -c $< -o $@ -I$(INC) -DVENDOR=$(VENDOR) \
+	$(Q)$(CC) $(CCFLAGS) -c $< -o $@ $(INCLUDE) -DVENDOR=$(VENDOR) \
           -DFAMILY=$(FAMILY) -DMODEL=$(MODEL)
 
 
@@ -88,7 +89,7 @@ endif
   $(SRC)$(VENDOR)/$(FAMILY)/ $(SRC)$(VENDOR)/$(FAMILY)/$(MODEL)/, \
   $(wildcard $(subdir)*.c)) $(wildcard $(INC)*.h)
 	$(call cmd-print,  MKDEP   $@)
-	$(Q)$(CC) -MM $(filter %.c, $^) -I$(INC) \
+	$(Q)$(CC) -MM $(filter %.c, $^) $(INCLUDE) \
         | sed ':x; /\\$$/ { N; s/\\\n[[:space:]]*//; tx }' \
         | sed -r 's%^.*: $(SRC)(.*).c %$$(OBJ)\1.o: $$(SRC)\1.c %' \
         | sed -r 's%^\$$\(OBJ\)(.*/)?(.*):(.*)%$$(OBJ)\1\2:\3 | $$(OBJ)\1%' \

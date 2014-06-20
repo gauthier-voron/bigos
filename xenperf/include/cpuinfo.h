@@ -2,6 +2,9 @@
 #define CPUINFO_H
 
 
+#include <stdlib.h>
+
+
 struct cpuinfo
 {
 	char            vendor[13];
@@ -22,6 +25,8 @@ struct coreinfo
 };
 
 int probe_coreinfo(struct coreinfo *dest);
+
+int probe_coremap(unsigned int *coremap, size_t size);
 
 
 int getcore(void);

@@ -1,177 +1,124 @@
+#include "common.h"
 #include "cpuinfo.h"
 #include "hypercall.h"
 #include "perfinfo.h"
 
 
-struct percnt_nb
-{
-	void      *select;
-	void      *counter;
-};
+#define LEGACY_PMC_FLAG_USR         (1 << 16)
+#define LEGACY_PMC_FLAG_OS          (1 << 17)
+#define LEGACY_PMC_FLAG_ENABLE      (1 << 22)
 
-#define PERFCNT_TYPE_CORE   0
-#define PERFCNT_TYPE_L2     1
-#define PERFCNT_TYPE_NB     2
 
-struct perfcnt
+struct legacy_perfcnt
 {
-	int                        type;
-	union
-	{
-		struct percnt_nb   nb;
-	};
+	struct perfcnt  super;
+	unsigned long   select;
+	unsigned long   counter;
+	unsigned long   bitsize;
 };
 
 
-#define PERFCNT_NB_COUNT            4
-#define PERFCNT_NB_SELECT_BASE      0xc0010240
-#define PERFCNT_NB_COUNTER_BASE     0xc0010241
 
-static int __probe_perfinfo_nb(struct perfcnt *arr, size_t size)
+unsigned long __legacy_bitsize(const struct perfcnt *this)
 {
-	size_t i;
-	struct register_set regs;
-
-	regs.eax = 0x80000001;
-	cpuid(&regs, &regs);
-
-	if (!(regs.ecx & (1 << 24)))
-		return -1;
-
-	for (i=0; i<PERFCNT_NB_COUNT && i<size; i++) {
-		arr[i].type = PERFCNT_TYPE_NB;
-		arr[i].nb.select = (void *) (PERFCNT_NB_SELECT_BASE + i*2);
-		arr[i].nb.counter = (void *) (PERFCNT_NB_COUNTER_BASE + i*2);
-	}
-
-	return (int) i;
+	return ((const struct legacy_perfcnt *) this)->bitsize;
 }
 
-
-#define PERFCNT_MAX_COUNT    128
-
-int probe_perfinfo(struct perfinfo *dest)
+int __legacy_hasevt(const struct perfcnt *this __unused, unsigned long evt)
 {
-	int ret;
-	size_t i;
-	static size_t size = 0;
-	static struct perfcnt perf[PERFCNT_MAX_COUNT];
-	static perfcnt_t addr[PERFCNT_MAX_COUNT];
-
-	dest->count = size;
-	dest->list = addr;
-	dest->hyper = hypercall_channel_check() >= 0;	
-
-	if (size > 0)
-		goto out;
-
-	ret = __probe_perfinfo_nb(perf + size, PERFCNT_MAX_COUNT - size);
-	if (ret > 0)
-		size += (size_t) ret;
-
-	dest->count = size;
-	for (i=0; i<size; i++)
-		addr[i] = perf + i;
- out:
-	return 0;
-}
-
-
-int perfcnt_has_event(perfcnt_t perfcnt, unsigned long event)
-{
-	if (perfcnt->type != PERFCNT_TYPE_NB)
+	switch (evt) {
+	case EVENT_INSRET:
+	case EVENT_BRINST:
+	case EVENT_BRMISS:
+	case EVENT_NBREQT:
+		return 1;
+	default:
 		return 0;
-	if (event != EVT_NUMA_REQPATH)
-		return 0;
-	return 1;
-}
-
-
-
-static unsigned long perfcnt_nb_encode(unsigned long event,
-				       unsigned long umask)
-{
-	unsigned long encode = 0;
-	
-	encode |= (event & 0xff);
-	encode |= (event & 0xf00) << 32;
-	encode |= (umask & 0xff) << 8;
-	encode |= 1 << 22;
-
-	return encode;
-}
-
-
-int perfcnt_enable(perfcnt_t perfcnt, unsigned long event,
-		   unsigned long umask, int core)
-{
-	struct register_set regs;
-	unsigned long encode;
-
-	if (perfcnt->type == PERFCNT_TYPE_NB) {
-		encode = perfcnt_nb_encode(event, umask);
-		regs.ecx = (unsigned long) perfcnt->nb.select;
-		regs.eax = encode & 0xffffffff;
-		regs.edx = encode >> 32;
-	} else {
-		return -1;
 	}
-
-	if (setcore(core) < 0)
-		return -1;
-	return hypercall_wrmsr(&regs);
 }
 
-int perfcnt_disable(perfcnt_t perfcnt, int core)
+int __legacy_enable(const struct perfcnt *this, unsigned long evt,
+		    unsigned long umask, int core)
 {
 	struct register_set regs;
+	unsigned long mask = LEGACY_PMC_FLAG_USR | LEGACY_PMC_FLAG_OS
+		| LEGACY_PMC_FLAG_ENABLE | (evt & 0xff)
+		| ((umask & 0xff) << 8);
 
-	if (perfcnt->type == PERFCNT_TYPE_NB)
-		regs.ecx = (unsigned long) perfcnt->nb.select;
-	else
-		return -1;
-
+	regs.ecx = ((struct legacy_perfcnt *) this)->select;
+	regs.eax = mask;
 	regs.edx = 0;
-	regs.eax = 0;
+	
+	if (setcore(core) < 0)
+		return -1;
 
+	return hypercall_wrmsr(&regs);
+}
+
+int __legacy_disable(const struct perfcnt *this, int core)
+{
+	struct register_set regs;
+
+	regs.ecx = ((struct legacy_perfcnt *) this)->select;
+	regs.eax = 0;
+	regs.edx = 0;
+	
 	if (setcore(core) < 0)
 		return -1;
 	return hypercall_wrmsr(&regs);
 }
 
-
-unsigned long perfcnt_read(perfcnt_t perfcnt, int core)
+unsigned long __legacy_read(const struct perfcnt *this, int core)
 {
 	struct register_set regs;
-	
-	if (perfcnt->type == PERFCNT_TYPE_NB)
-		regs.ecx = (unsigned long) perfcnt->nb.counter;
-	else
-		return (unsigned long) -1;
 
+	regs.ecx = ((struct legacy_perfcnt *) this)->counter;
+	
 	if (setcore(core) < 0)
 		return -1;
 	if (hypercall_rdmsr(&regs) < 0)
 		return -1;
 
-	return (((unsigned long) (regs.edx & 0xffffffff)) << 32)
-		| (regs.eax & 0xffffffff);
+	return ((unsigned long) regs.edx << 32) | (regs.eax & 0xffffffff);
 }
 
-int perfcnt_write(perfcnt_t perfcnt, unsigned long val, int core)
+int __legacy_write(const struct perfcnt *this, unsigned long val, int core)
 {
 	struct register_set regs;
 
-	if (perfcnt->type == PERFCNT_TYPE_NB)
-		regs.ecx = (unsigned long) perfcnt->nb.counter;
-	else
-		return -1;
-
+	regs.ecx = ((struct legacy_perfcnt *) this)->counter;
 	regs.eax = val & 0xffffffff;
-	regs.eax = val >> 32;
-
+	regs.edx = val >> 32;
+	
 	if (setcore(core) < 0)
 		return -1;
 	return hypercall_wrmsr(&regs);
+}
 
+#define LEGACY_SUPER { __legacy_bitsize, __legacy_hasevt, __legacy_enable, \
+			__legacy_disable, __legacy_read, __legacy_write }
+
+struct legacy_perfcnt legacy_perfcnt[] = {
+	{ LEGACY_SUPER, 0xc0010000, 0xc0010004, 48 },
+	{ LEGACY_SUPER, 0xc0010001, 0xc0010005, 48 },
+	{ LEGACY_SUPER, 0xc0010002, 0xc0010006, 48 },
+	{ LEGACY_SUPER, 0xc0010003, 0xc0010007, 48 }
+};
+
+
+size_t __probe_perfcnt_vendor(const struct perfcnt **arr, size_t size,
+			      unsigned long evt)
+{
+	size_t i, len = 4, count = 0;
+
+	for (i=0; i<len; i++) {
+		if (count >= size)
+			break;
+		if (!perfcnt_hasevt(&legacy_perfcnt[i].super, evt))
+			continue;
+
+		arr[count++] = &legacy_perfcnt[i].super;
+	}
+
+	return count;
 }

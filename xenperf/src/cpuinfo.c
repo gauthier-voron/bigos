@@ -5,20 +5,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "asm.h"
+#include "common.h"
 #include "cpuinfo.h"
 
 extern int sched_getcpu(void);
 
 
-int __attribute__((weak)) __cpuinfo_family(int family __attribute__((unused)),
-					   int efamily __attribute__((unused)))
+int __weak __cpuinfo_family(int family __unused, int efamily __unused)
 {
 	return -1;
 }
 
-int __attribute__((weak)) __cpuinfo_model(int family __attribute__((unused)),
-					  int model __attribute__((unused)),
-					  int emodel __attribute__((unused)))
+int __weak __cpuinfo_model(int family __unused, int model __unused,
+			   int emodel __unused)
 {
 	return -1;
 }
@@ -58,8 +57,8 @@ int probe_cpuinfo(struct cpuinfo *dest)
 
 
 
-/* Will not work under xen since it masks the NUMA topology */
-__attribute__((weak)) int probe_nodeinfo(struct coreinfo *dest)
+/* Will not work under xen since it hides the NUMA topology */
+__weak int probe_nodeinfo(struct coreinfo *dest)
 {
 	FILE *f;
 	size_t size;
@@ -95,7 +94,7 @@ __attribute__((weak)) int probe_nodeinfo(struct coreinfo *dest)
 	return 0;
 }
 
-int __attribute__((weak)) probe_coreinfo(struct coreinfo *dest)
+int __weak probe_coreinfo(struct coreinfo *dest)
 {
 	DIR *dir = opendir("/sys/devices/system/cpu");
 	struct dirent *dirent;
@@ -126,12 +125,45 @@ int __attribute__((weak)) probe_coreinfo(struct coreinfo *dest)
 }
 
 
-int __attribute__((weak)) getcore(void)
+/* Will not work under xen since it hides the NUMA topology */
+int __weak probe_coremap(unsigned int *coremap, size_t size)
+{
+	FILE *f;
+	size_t len;
+	unsigned int core, ret;
+	char buffer[1024];
+	const char *pattern = "/sys/devices/system/cpu/cpu%d/topology/core_id";
+
+	for (core=0; core<size; core++) {
+		ret = snprintf(buffer, sizeof(buffer), pattern, core);
+		if (ret >= sizeof(buffer))
+			return -1;
+		
+		f = fopen(buffer, "r");
+		if (f == NULL)
+			return -1;
+
+		fseek(f, 0, SEEK_END);
+		len = ftell(f);
+		fseek(f, 0, SEEK_SET);
+
+		fread(buffer, sizeof(char), len, f);
+		fclose(f);
+
+		ret = atoi(buffer);
+		coremap[core] = (unsigned int) ret;
+	}
+	
+	return 0;
+}
+
+
+int __weak getcore(void)
 {
 	return sched_getcpu();
 }
 
-int __attribute__((weak)) setcore(int core)
+int __weak setcore(int core)
 {
 	int try = 30;
 	cpu_set_t mask;
