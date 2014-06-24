@@ -53,19 +53,29 @@ struct perfevt
 extern struct perfevt all_events[];
 
 
+struct perfcnt;
+
+typedef unsigned long  (*perfcnt_bitsize_t)(const struct perfcnt *this);
+typedef int            (*perfcnt_hasevt_t)(const struct perfcnt *this,
+					   unsigned long evt);
+
+typedef int            (*perfcnt_enable_t)(const struct perfcnt *this,
+					   unsigned long evt,
+					   unsigned long umask, int core);
+typedef int            (*perfcnt_disable_t)(const struct perfcnt *this,
+					    int core);
+typedef unsigned long  (*perfcnt_read_t)(const struct perfcnt *this, int core);
+typedef int            (*perfcnt_write_t)(const struct perfcnt *this,
+					  unsigned long val, int core);
+
 struct perfcnt
 {
-	unsigned long  (*bitsize)(const struct perfcnt *this);
-	int            (*hasevt)(const struct perfcnt *this,
-				 unsigned long evt);
-
-	int            (*enable)(const struct perfcnt *this, unsigned long evt,
-				 unsigned long umask, int core);
-	int            (*disable)(const struct perfcnt *this, int core);
-
-	unsigned long  (*read)(const struct perfcnt *this, int core);
-	int            (*write)(const struct perfcnt *this, unsigned long val,
-				int core);
+	perfcnt_bitsize_t   bitsize;
+	perfcnt_hasevt_t    hasevt;
+	perfcnt_enable_t    enable;
+	perfcnt_disable_t   disable;
+	perfcnt_read_t      read;
+	perfcnt_write_t     write;
 };
 
 
