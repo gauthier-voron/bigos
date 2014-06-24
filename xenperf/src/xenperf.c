@@ -287,8 +287,6 @@ static int initialize_counters(const struct perfcnt **perfcnt,
 }
 
 static int run_counters(const struct perfcnt **perfcnt,
-			const unsigned long *events,
-			const unsigned long *umasks,
 			const unsigned long *cpumasks, size_t size,
 			const struct coreinfo *coreinfo)
 {
@@ -342,15 +340,6 @@ static int run_counters(const struct perfcnt **perfcnt,
 					fprintf(stderr, "xenperf: cannot write"
 						" counter %p on core %u\n",
 						perfcnt[i], j);
-				}
-
-				if (pmc == 0) {
-					fprintf(stderr, "suspecting counter "
-						"alteration for %p on core "
-						"%u\n",
-						perfcnt[i], j);
-					perfcnt_enable(perfcnt[i], events[i],
-						       umasks[i], j);
 				}
 			}
 		printf("\n");
@@ -446,51 +435,12 @@ int main(int argc, const char **argv)
 				&coreinfo) < 0)
 		return EXIT_FAILURE;
 
-	if (run_counters(perfcnt, events, umasks, cpumasks, (argc - 1),
+	if (run_counters(perfcnt, cpumasks, (argc - 1),
 			 &coreinfo) < 0)
 		return EXIT_FAILURE;
 
 	if (finalize_counters(perfcnt, cpumasks, (argc - 1), &coreinfo) < 0)
 		return EXIT_FAILURE;
-
-	/* const struct perfcnt *perfcnt; */
-	/* unsigned int *coremap; */
-	/* unsigned int *cores; */
-	/* size_t i, j; */
-
-	/* if (check_cpuinfo(&cpuinfo, 1) < 0) */
-	/* 	return EXIT_FAILURE; */
-	/* if (check_coreinfo(&coreinfo, 1) < 0) */
-	/* 	return EXIT_FAILURE; */
-	/* if (check_perfcnt(&perfcnt, 1) == 0) */
-	/* 	return EXIT_FAILURE; */
-	/* if (check_hypercall(1) < 0) */
-	/* 	return EXIT_FAILURE; */
-
-	/* if (configure_sighandler() < 0) { */
-	/* 	fprintf(stderr, "xenperf: cannot set signal handler up\n"); */
-	/* 	perror("xenperf"); */
-	/* 	return EXIT_FAILURE; */
-	/* } */
-
-	/* coremap = alloca(sizeof(unsigned int) * coreinfo.core_count); */
-	/* probe_coremap(coremap, coreinfo.core_count); */
-
-	/* /\* cores = alloca(sizeof(unsigned int) * coreinfo.core_count); *\/ */
-	/* /\* for (i=0; i<coreinfo.core_count; i++) *\/ */
-	/* /\* 	cores[i] = i; *\/ */
-
-	/* cores = alloca(sizeof(unsigned int) * coreinfo.node_count); */
-	/* for (i=0, j=0; i<coreinfo.core_count; i++) */
-	/* 	if (coremap[i] == j) */
-	/* 		cores[j++] = i; */
-
-
-	/* display_events(); */
-
-	/* if (run_counters(perfcnt, EVENT, UMASK, */
-	/* 		 cores, coreinfo.node_count) < 0) */
-	/* 	return EXIT_FAILURE; */
 	
 	return EXIT_SUCCESS;
 }
