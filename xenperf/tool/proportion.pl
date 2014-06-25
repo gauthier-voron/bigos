@@ -38,6 +38,7 @@ while (<>) {
 	$sum += $_;
     }
     $skip and next;
+    ($sum == 0) and next;
 
     foreach (@fields[1 .. $#fields]) {
 	$line .= (sprintf "\t%.1f", (($_ * 100) / $sum));
