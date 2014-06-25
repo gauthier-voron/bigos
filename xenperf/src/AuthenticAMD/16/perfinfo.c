@@ -92,12 +92,12 @@ unsigned long __legacy_read(const struct legacy_perfcnt *this, int core)
 
 	mask = ((unsigned long) regs.edx << 32) | (regs.eax & 0xffffffff);
 	if (this->bitmask != mask) {
-		regs.eax = mask & 0xffffffff;
+		regs.eax = this->bitmask & 0xffffffff;
 		regs.ecx = this->select;
-		regs.edx = mask >> 32;
+		regs.edx = this->bitmask >> 32;
 		if (setcore(core) < 0)
 			return -1;
-		hypercall_wrmsr(&regs);;
+		hypercall_wrmsr(&regs);
 
 		return -1;
 	}
