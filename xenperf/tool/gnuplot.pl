@@ -72,7 +72,6 @@ set key spacing .5 font ',8'
 set key center outside bottom
 set key maxrows 4
 set xlabel 'time (s)'
-set ylabel 'count'
 EOF
 
 if ($logscale) {
