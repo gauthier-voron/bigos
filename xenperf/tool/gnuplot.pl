@@ -19,7 +19,7 @@ sub _die
 }
 
 
-my $line = <>;
+my $line;
 my $base;
 my $delta;
 my $index;
@@ -37,6 +37,7 @@ my %bases;
 my %events;
 
 
+Getopt::Long::Configure("bundling");
 GetOptions (
     'verbose|v' => \$verbose,
     'logscale|l' => \$logscale,
@@ -47,6 +48,7 @@ GetOptions (
     );
 
 
+$line = <>;
 $line =~ s/^#\s*time\s+// || _die "invalid data header: time field";
 @fields = split /\s+/, $line;
 
@@ -85,7 +87,7 @@ printf $gnuplotfd 'plot ';
 $index = 2;
 foreach (@fields) {
     $_ =~ /^\s*0x([0-9a-fA-F]+):([0-9a-fA-F]+)\((.*)\)\s*$/;
-    $base = hex($bases{"$1:$2"}) || hex(substr(sha1_hex($1 . ':' . $2), 0, 6));
+    $base = hex($bases{"$1:$2"} || substr(sha1_hex($1 . ':' . $2), 0, 6));
     $delta = hex(substr(sha1_hex($3), 0, 6));
     $delta = (($delta | ($delta << 4)) & 0x3f3f3f0) >> 4;
     $base += $delta;
