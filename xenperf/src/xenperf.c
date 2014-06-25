@@ -10,6 +10,7 @@
 #include "cpuinfo.h"
 #include "hypercall.h"
 #include "sanity.h"
+#include "stringify.h"
 #include "perfinfo.h"
 
 #define INITIAL_NANOSLEEP      (50000)
@@ -398,6 +399,7 @@ int main(int argc, const char **argv)
 	if (argc == 1) {
 		printf("usage: %s [event[:umask]]...\n\n", argv[0]);
 		display_events();
+		printf("\nxenperf -- version %s\n", stringify(VERSION));
 		return EXIT_SUCCESS;
 	}
 

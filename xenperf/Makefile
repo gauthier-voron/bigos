@@ -14,6 +14,11 @@ MODEL   ?= $(firstword $(shell sed -nr 's/model[[:space:]]*: (.*)/\1/p' \
                                /proc/cpuinfo))
 ARCH    := $(VENDOR)_$(FAMILY)_$(MODEL)
 
+MAJOR_VERSION := 1
+MINOR_VERSION := 0
+HTFIX_VERSION := 0
+VERSION := $(MAJOR_VERSION).$(MINOR_VERSION).$(HTFIX_VERSION)
+
 CC      := gcc
 CCFLAGS := -Wall -Wextra
 LDFLAGS := -lxenctrl
@@ -76,7 +81,7 @@ $(BIN)xenperf: $(patsubst $(SRC)%.c, $(OBJ)%.o, $(foreach subdir, $(SRC) \
 $(OBJ)%.o:
 	$(call cmd-print,  CC      $@) 
 	$(Q)$(CC) $(CCFLAGS) -c $< -o $@ $(INCLUDE) -DVENDOR=$(VENDOR) \
-          -DFAMILY=$(FAMILY) -DMODEL=$(MODEL)
+          -DFAMILY=$(FAMILY) -DMODEL=$(MODEL) -DVERSION=$(VERSION)
 
 
 ifeq ($(mode),build)
