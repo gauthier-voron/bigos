@@ -22,6 +22,7 @@ sub _die
 my $line;
 my $base;
 my $delta;
+my $style;
 my $index;
 my @fields;
 
@@ -33,6 +34,7 @@ my $x11;
 my $verbose;
 my $title = '';
 my $logscale;
+my $filledcurve;
 my %bases;
 my %events;
 
@@ -41,6 +43,7 @@ Getopt::Long::Configure("bundling");
 GetOptions (
     'verbose|v' => \$verbose,
     'logscale|l' => \$logscale,
+    'filledcurve|f' => \$filledcurve,
     'x11|x' => \$x11,
     'color=s' => \%bases,
     'event=s' => \%events,
@@ -69,7 +72,6 @@ set key spacing .5 font ',8'
 set key center outside bottom
 set key maxrows 4
 set xlabel 'time (s)'
-set ylabel 'count'
 EOF
 
 if ($logscale) {
@@ -93,7 +95,13 @@ foreach (@fields) {
     $base += $delta;
     $base = sprintf '%x', $base;
 
-    print $gnuplotfd "'$data' using $index with lines title '"
+    if ($filledcurve) {
+	$style = 'filledcurve x1';
+    } else {
+	$style = 'lines';
+    }
+
+    print $gnuplotfd "'$data' using $index with $style title '"
 	. ($events{"$1:$2"} || "0x$1:$2") . " (core $3)' "
 	. "lc rgb '#$base', \\";
     $index++;
