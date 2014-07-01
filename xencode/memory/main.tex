@@ -1,0 +1,54 @@
+\label{memory/main}
+
+\paragraph{}
+There is three kind of memory managment on Xen.
+The first one is the historical paravirtualized memory managment where the
+guest is aware of its own virtualization.
+The second one came with the first hardware assistance for virtualization,
+allowing to run unmodified OS as guest with good performances.
+Finally, the third appeared when the hardware provided an efficient
+virtualization support in the MMU.
+
+\paragraph{}
+Before to see what mechanisms are enabled to allow the guests data to coexist
+without interference, we have to introduce some vocabulary over the kind of
+memory in an hypervisor as Xen.
+Because the memory can be seen from three levels of privilege, there is three
+kind of memory address:
+\begin{description}
+\item[Machine address (mfn)] is the ``true'' address of some data, as provided
+  by the memory controller.
+  When you boot the computer and the BIOS (or the bootloader) jump to your
+  code, that is the kind of address you can play with.
+\item[Physical address (gfn)] is the address the guest OS considers as true.
+  When Xen boot a DomU and jump to its code, that is the kind of address the
+  OS sees.
+\item[Virtual address (vfn)] is the address the application see.
+  It is your normal, clean, mmap provided memory, the one you love to play
+  with until you get a segmentation fault.
+\end{description}
+
+\paragraph{}
+There also is another taxonomy of address introduced with the need of nested
+virtualization (or how to run an hypervisor under another hypervisor).
+In this case the kind of address is given by the level of virtualization,
+prefixed by a ``l'':
+\begin{description}
+\item[l0] is the address understood by the CPU without any virtualization.
+  It is the kind of addresses the ``master'' hypervisor worry about.
+\item[l1] is the address seen by the first level virtualized entity, for
+  instance, a second hypervisor.
+\item[l2] \ldots
+\end{description}
+
+
+\section{Paravirtualized memory managment}
+\label{memory/paravirt}
+(not yet)
+
+\section{Hardware virtualized memory managment}
+\label{memory/hvm}
+(not yet)
+
+\section{Hardware assisted memory managment}
+\input{memory/hap}

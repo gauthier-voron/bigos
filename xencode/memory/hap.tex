@@ -1,0 +1,226 @@
+\label{memory/hap}
+
+\paragraph{}
+Before to enter deeply in the code, let us ask the question ``how does the
+hardware assisted memory managment works ?''.
+There is actually two kind of memory managment, each provided by the two main
+constructors of x86 processors, Intel and AMD.
+We will only see how it works for AMD but the principle should be the same for
+Intel.
+
+\paragraph{}
+Without virtualization it only exists virtual addresses and machine ones.
+So the OS maintain a page table which associate with each virtual address a
+machine one (a page table for each task).
+When the application which knows only virtual address access one, the hardware
+starts by looking into its TLB (cache for virtual to machine translation).
+If it does not find the appropriate translation, the hardware will walk over
+the page table (its start is pointed by the special register CR3) until finding
+the mapping.
+If the mapping is not present, a hardware interruption is generated and the OS
+have to add the mapping.
+
+\paragraph{}
+Now in the case of hardware virtualization, the guest OS has to believe this
+is what happen, but for obvious safety reasons, the guest will only map
+virtual addresses to physical ones, and Xen will then provide a mapping from
+physical to machine address, just like in \ref{memory/hvm}.
+The difference is the shadow page table is not walked by software but directly
+by the CPU.
+Right before to enter into a guest, the hypervisor execute the assembly
+instruction \verb!VMRUN! which tell the computer it is now running under
+virtualization.
+So back to the normal paging scheme, the application access to a virtual
+address for the first time.
+\begin{itemize}
+\item The MMU watch into its TLB to see if there is a virtual to machine
+  mapping.
+\item Because it does not find, the MMU will walk the page table, but not the
+  one indicated by CR3.
+\item Instead it will look into the gCR3 register which is presented to the
+  guest as the true CR3.
+\item The gCR3 contains a physical address, so the MMU will look again in its
+  TLB to see if there is a physical to machine mapping.
+\item Let us say there is not, so the MMU will look into the real CR3 register
+  (we call it hCR3) the location of the page table for the current guest.
+\item The MMU now find the machine address for the guest page table, and it
+  update the TLB.
+\item The MMU read the first level of the guest page table and find the
+  (physical) address of the second level for the wanted virtual address and
+  try to access it.
+\item Once again, the MMU look into its TLB, will maybe walk the physical to
+  machine page table and this for the four (in 64-bit mode) levels.
+\item Finally, the MMU get to the last level of the gCR3 pointed page table
+  and see there is no mapping for the requested virtual address, and so
+  throw a page fault to the guest OS (the hardware can store the guest
+  interruption vector and use it when \verb!VMRUN!).
+\item The guest OS will walk the page table, hopefully, the physical to machine
+  mapping should be in the TLB, choose a physical page frame, create the
+  mapping and perform and \verb!IRET!.
+\item The MMU can now walk again the gCR3 page table and find the virtual
+  to physical mapping and now it want to perform the very last physical to
+  machine mapping to finally allow the application to access this page.
+\item The MMU walk the hCR3 pointed page table and find no mapping for this
+  last physical address and so generate a \verb!VMEXIT! exception with the
+  error code \verb!NPF! (Nested Page Fault).
+\end{itemize}
+
+\paragraph{}
+And now the funny stuff begins, and we will start to fall into the Xen code,
+starting with \verb!svm_exit_handler()!
+(xen/arch/x86/hvm/svm/svm.c).
+So this function starts by checking what is the error reason.
+The one we are interrested in is \verb!VMEXIT_NPF!, in this case it
+will call \verb!svm_do_nested_pgfault()!.
+
+\paragraph{}
+In \verb!svm_do_nested_pgfault()! (xen/arch/x86/hvm/svm/svm.c), the first call
+(to \verb!hvm_hap_nested_page_fault()!) is a trap, because the ``nested'' in
+the function name here stands for the nested virtualization.
+This special case brings a lot of complexity and we will ignore it.
+Much more interresting is the \verb!__get_gfn_type_access()! because this is
+the function which will bring back a fresh new page.
+
+\paragraph{}
+The \verb!__get_gfn_type_access()! (xen/arch/x86/mm/p2m.c) is also called in
+paravirtualized mode (\ref{memory/paravirt}) and so the beginning of the
+function is useless for us.
+The things are getting cool when we get to the virtual call
+\verb!p2m->get_entry()! which is intended to bring back an \verb!mfn! using
+the hardware related (Intel or AMD) method.
+We are looking for the AMD implementation which is the function
+\verb!p2m_gfn_to_mfn()!.
+
+\paragraph{}
+This last function (xen/arch/x86/mm/p2m-pt.c) makes a first assignation
+\verb!mfn = pagetable_get_mfn()! to get the top level of the guest related,
+hCR3 pointed page table.
+It will then walk this page table, allocating the missing levels if needed
+until the last level.
+Actually, this happens only if the DomU is configured as a ``page on demand''
+guest, otherwise, all the mapping is done at the guest creation (which is the
+default).
+Nevertheless, we will see the ``page on demand'' case since it is a superset of
+the default policy.
+Both the intermediate and the last level allocations go throught the same
+function \verb!p2m_pod_demand_populate()!, the only difference is the size
+of the required page is larger when the level is nearer of the top.
+
+\paragraph{}
+The function \verb!p2m_pod_demand_populate()! (xen/arch/x86/mm/p2m-pod.c) is
+a convenient way to access to what is called the POD cache (for Page On
+Demand).
+The POD cache consist in a simply linked list of 2 Megabytes pages and another
+list of 4 Kilobytes pages.
+There also is a counter indicating how many 4 KB pages there is in the cache
+(each 2 MB page is counted as 512 4 KB pages).
+The only interresting calls made in this function are:
+\begin{itemize}
+\item \verb!p2m_pod_cache_get()! which remove a 2 MB or 4 MB page from the
+  cache, updating the lists (but not the counter, which is modified here).
+\item \verb!set_p2m_entry()! to associate the physical address (\verb!gfn!)
+  to the obtained machine address (\verb!mfn!).
+\item \verb!set_gpfn_from_mfn()! to associate back the machine address to
+  the physical one.
+\end{itemize}
+All the remainding is housekeeping and extremely rare error handling (such as
+no more memory).
+
+\paragraph{}
+So when a page fault (or similarily a nested page fault) occurs, Xen will find
+a free page in the POD cache.
+If it fails, an out of memory error process is started and eventually, the
+DomU will crash.
+The next question is ``where does the pages of the POD cache come from ?''.
+To find the answer, it is necessary to check the DomU creation code, and it
+start with the \verb!xc_hvm_build()! function (actually, we could start upper
+in the call stack but we are not interested in the \verb!xc! command code
+here).
+
+\paragraph{}
+So the \verb!xc_hvm_build()! (tools/libxc/xc\_hvm\_build\_x86.c) is intended to
+build and set up a new DomU from a Xen configuration file (already parsed).
+Its role is simply to perform some control over the configuration arguments,
+load the kernel image and call the \verb!setup_guest()! function.
+
+\paragraph{}
+There is some serious stuff in this function
+(tools/libxc/xc\_hvm\_build\_x86.c) like kernel elf parsing, kernel module
+loading etc\ldots
+There is then some memory related code to try to check if Xen has enought
+memory to give to the new guest and finally comes the interresting part:
+Earlier in this section we made the distinction between two kinds of memory
+managment: ``page on demand'' and the default one.
+If the first, the function \verb!xc_domain_set_pod_target()! is called,
+otherwise it is not (we will describe it a little later).
+In both cases, \verb!xc! calls \verb!xc_domain_populate_physmap()!
+(the previous call to the similar function
+\verb!xc_domain_populate_physmap_exact()! is a kind of fast path).
+
+\paragraph{}
+This function \verb!xc_domain_populate_physmap()! (tools/libxc/xc\_domain.c) is
+a wrapper for a Xen hypercall where the operation is
+\verb!__HYPERVISOR_memory_op! and the command is
+\verb!XENMEM_populate_physmap!.
+
+\paragraph{}
+Back in xen, our hypervisor catch this hypercall (as specified in the entry
+file xen/arch/x86/x86\_64/entry.S) with the function \verb!do_memory_op()!
+(located in xen/common/memory.c) which is basically a giant switch which will
+brings us to the case \verb!XENMEM_populate_physmap! Xen make some
+housekeeping with the flags and then call \verb!populate_physmap()!
+
+\paragraph{}
+In case of ``page on demand'', the function \verb!populate_physmap()! does
+nothing (at least we will admit it for simplification reasons).
+Else it will call the function \verb!alloc_domheap_pages()!.
+Actually, if we are in ``page on demand'' policy, this function will also be
+called.
+If we backtrack a little in the \verb!xc! code at the
+\verb!xc_domain_set_pod_target()!.
+
+\paragraph{}
+In this function \verb!xc_domain_set_pod_target()! (tools/libxc/xc\_domain.c)
+which is an alias for \verb!xc_domain_pod_target()! (tools/libxc/xc\_domain.c),
+\verb!xc! perform another hypercall with the operation
+\verb!__HYPERVISOR_memory_op! and the command \verb!XENMEM_set_pod_target!.
+
+\paragraph{}
+This will be catch by the giant switch of the well known \verb!do_memory_op()!
+(xen/common/memory.c) which will transfert it to the arch dependent handler
+\verb!arch_memory_op()! (xen/arch/x86/mm.c) which is another giant switch we
+are interrested in the case \verb!XENMEM_set_pod_target! which will finally
+call \verb!p2m_pod_set_mem_target()!.
+
+\paragraph{}
+After a little control over the given arguments,
+\verb!p2m_pod_set_mem_target()! (xen/arch/x86/mm/p2m-pod.c) will pass them to
+the next function named \verb!p2m_pod_set_cache_target()! (xen/arch/x86/mm/p2m-pod.c)
+which will call our previously introduced \verb!alloc_domheap_pages()!.
+
+\paragraph{}
+Now it comes the memory strategy, almost, because \verb!alloc_domheap_pages()!
+(xen/common/page\_alloc.c) still need to determine on what memory zone it
+will allocate pages (machine ones).
+Whatever the zone, \verb!alloc_heap_pages()! is finally called.
+Please also note than whatever the memory policy, this function is called
+multiple times (once for each 2 MB or 1 GB chunk of memory, depending on the
+policy).
+
+\paragraph{}
+This time is the good one, \verb!alloc_heap_pages()! is the function which
+decides where the pages are allocated.
+The algorithm is fairly simple, given a numa node mask (all nodes by default),
+select the node next to the previously allocating one.
+Then for this node, try to find a zone accordingly to the given zone
+constraints which has enought free space (if several ones, take the smallest).
+If such a zone is found, return it, otherwise, try the next node in the
+nodemask.
+If no node in the nodemask succeed, try in the other ones.
+If no node succeed, then fails by returning NULL.
+
+\paragraph{}
+For each allocated chunk, the given (machine) address is assigned to the
+domain (with \verb!assig_pages()! in xen/common/page\_alloc.c) and depending
+on the memory managment, added to the POD cache, or mapped to the hCR3 pointed
+page table.
