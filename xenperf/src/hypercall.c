@@ -11,9 +11,10 @@
 #define HYPERCALL_PROBE_CMD    -1
 #define HYPERCALL_WRMSR_CMD    -2
 #define HYPERCALL_RDMSR_CMD    -3
+#define HYPERCALL_COUNT_CMD    -4
 
 
-static int __hypercall_perform(unsigned long cmd, struct register_set *regs)
+static int __hypercall_perform(unsigned long cmd, unsigned long regs)
 {
 	int ret;
 	xc_interface *xch = xc_interface_open(0, 0, 0);
@@ -25,7 +26,7 @@ static int __hypercall_perform(unsigned long cmd, struct register_set *regs)
 
 	hypercall.op = __HYPERVISOR_xen_version;
 	hypercall.arg[0] = cmd;
-	hypercall.arg[1] = (unsigned long) regs;
+	hypercall.arg[1] = regs;
 
 	ret = do_xen_hypercall(xch, &hypercall);
 	xc_interface_close(xch);
@@ -41,15 +42,22 @@ static int __hypercall_perform(unsigned long cmd, struct register_set *regs)
 
 int hypercall_channel_check(void)
 {
-	return __hypercall_perform(HYPERCALL_PROBE_CMD, NULL);
+	return __hypercall_perform(HYPERCALL_PROBE_CMD, (unsigned long) NULL);
 }
 
-int hypercall_wrmsr(struct register_set *regs)
+int hypercall_wrmsr(struct register_set *regs, int vdom)
 {
-	return __hypercall_perform(HYPERCALL_WRMSR_CMD, regs);
+	regs->ebx = vdom;   /* rdmsr never uses ebx => ugly but works */
+	return __hypercall_perform(HYPERCALL_WRMSR_CMD, (unsigned long) regs);
 }
 
-int hypercall_rdmsr(struct register_set *regs)
+int hypercall_rdmsr(struct register_set *regs, int vdom)
 {
-	return __hypercall_perform(HYPERCALL_RDMSR_CMD, regs);
+	regs->ebx = vdom;   /* rdmsr never uses ebx => ugly but works */
+	return __hypercall_perform(HYPERCALL_RDMSR_CMD, (unsigned long) regs);
+}
+
+int hypercall_domcount(unsigned int *count)
+{
+	return __hypercall_perform(HYPERCALL_COUNT_CMD, (unsigned long) count);
 }

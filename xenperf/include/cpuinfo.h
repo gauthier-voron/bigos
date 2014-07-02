@@ -22,6 +22,7 @@ struct coreinfo
 	unsigned int  core_current;
 	unsigned int  node_count;
 	unsigned int  node_current;
+	unsigned int  vdom_count;
 };
 
 int probe_coreinfo(struct coreinfo *dest);

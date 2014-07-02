@@ -7,6 +7,7 @@
 #include "asm.h"
 #include "common.h"
 #include "cpuinfo.h"
+#include "hypercall.h"
 
 extern int sched_getcpu(void);
 
@@ -120,6 +121,12 @@ int __weak probe_coreinfo(struct coreinfo *dest)
 
 	if (probe_nodeinfo(dest) < 0)
 		return -1;
+
+	dest->vdom_count = 0;
+	if (hypercall_channel_check() == 0) {
+		if (hypercall_domcount(&dest->vdom_count) < 0)
+			return -1;
+	}
 
 	return 0;
 }

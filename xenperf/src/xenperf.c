@@ -249,15 +249,19 @@ static void display_header(const unsigned long *events,
 			   const unsigned long *cpumasks, size_t size,
 			   const struct coreinfo *coreinfo)
 {
-	size_t i, j;
+	size_t i, j, k;
 
-	printf("# time      ");
+	printf("#time");
 
 	for (i=0; i<size; i++)
 		for (j=0; j<coreinfo->core_count; j++) {
 			if (!(cpumasks[i] & (1L << j)))
 				continue;
-			printf("\t0x%02lx:%02lx(%lu)", events[i],umasks[i],j);
+
+			for (k=0; k<1+coreinfo->vdom_count; k++) {
+				printf("\t0x%02lx:%02lx(%lu)(%lu)",
+				       events[i], umasks[i], j, k);
+			}
 		}
 	
 	printf("\n");
@@ -277,7 +281,7 @@ static int initialize_counters(const struct perfcnt **perfcnt,
 		for (j=0; j<core_count; j++) {
 			if (!(cpumasks[i] & (1L << j)))
 				continue;
-			if (perfcnt_write(perfcnt[i], 0, j) < 0)
+			if (perfcnt_write(perfcnt[i], 0, j, 0) < 0)
 				return -1;
 			if (perfcnt_enable(perfcnt[i], events[i], umasks[i],
 					   j) < 0)
@@ -287,13 +291,59 @@ static int initialize_counters(const struct perfcnt **perfcnt,
 	return 0;
 }
 
+static int display_counters(const struct perfcnt **perfcnt,
+			    const unsigned long *cpumasks, size_t size,
+			    const struct coreinfo *coreinfo)
+{
+	int up = 0, down = 0;
+	unsigned int i, j, k;
+	unsigned long pmc;
+
+	for (i=0; i<size; i++)
+		for (j=0; j<coreinfo->core_count; j++) {
+			if (!(cpumasks[i] & (1L << j)))
+				continue;
+			
+			for (k=0; k<1+coreinfo->vdom_count; k++) {
+				pmc = perfcnt_read(perfcnt[i], j, k);
+				
+				if (pmc == (unsigned long) -1) {
+					fprintf(stderr, "xenperf: cannot read "
+						"counter %p on core %u for "
+						"domain %u\n",
+						perfcnt[i], j, k);
+					printf("\t ");
+					continue;
+				}
+				
+				printf("\t%lu", pmc);
+
+				if (pmc > (COUNTER_CEIL / 2))
+					up = 1;               /* loop faster */
+				else if (pmc < (COUNTER_CEIL / 4))
+					down = 1;             /* loop slower */
+				
+				if (perfcnt_write(perfcnt[i], 0, j, k) < 0) {
+					fprintf(stderr, "xenperf: cannot write"
+						" counter %p on core %u for "
+						"domain %u\n",
+						perfcnt[i], j, k);
+				}
+			}
+		}
+	
+	if (up)
+		return 1;
+	if (down)
+		return -1;
+	return 0;
+}
+
 static int run_counters(const struct perfcnt **perfcnt,
 			const unsigned long *cpumasks, size_t size,
 			const struct coreinfo *coreinfo)
 {
-	int up, down;
-	unsigned int i, j;
-	unsigned long pmc;
+	int updown;
 	unsigned long sec = 0, nsec = 0;
 	struct timespec ts, tc;
 
@@ -312,44 +362,15 @@ static int run_counters(const struct perfcnt **perfcnt,
 			sec++;
 		}
 
-		up = down = 0;
-
 		printf("%lu.%09lu", sec, nsec);
-		for (i=0; i<size; i++)
-			for (j=0; j<coreinfo->core_count; j++) {
-				if (!(cpumasks[i] & (1L << j)))
-					continue;
-				
-				pmc = perfcnt_read(perfcnt[i], j);
-
-				if (pmc == (unsigned long) -1) {
-					fprintf(stderr, "xenperf: cannot read "
-						"counter %p on core %u\n",
-						perfcnt[i], j);
-					printf("\t          ");
-					continue;
-				}
-
-				printf("\t%-10lu", pmc);
-
-				if (pmc > (COUNTER_CEIL / 2))
-					up = 1;               /* loop faster */
-				else if (pmc < (COUNTER_CEIL / 4))
-					down = 1;             /* loop slower */
-
-				if (perfcnt_write(perfcnt[i], 0, j) < 0) {
-					fprintf(stderr, "xenperf: cannot write"
-						" counter %p on core %u\n",
-						perfcnt[i], j);
-				}
-			}
+		updown = display_counters(perfcnt, cpumasks, size, coreinfo);
 		printf("\n");
 			
-		if (up) {
+		if (updown > 0) {         /* loop faster */
 			ts.tv_nsec = ((ts.tv_sec * GIGA) / 2) % GIGA
 				+ ts.tv_nsec / 2;
 			ts.tv_sec /= 2;
-		} else if (down) {
+		} else if (updown < 0) {  /* loop slower */
 			ts.tv_sec = ts.tv_sec * 2 + ((ts.tv_nsec * 2) / GIGA);
 			ts.tv_nsec = (ts.tv_nsec * 2) % GIGA;
 
@@ -376,7 +397,7 @@ static int finalize_counters(const struct perfcnt **perfcnt,
 		for (j=0; j<core_count; j++) {
 			if (!(cpumasks[i] & (1L << j)))
 				continue;
-			if (perfcnt_write(perfcnt[i], 0, j) < 0)
+			if (perfcnt_write(perfcnt[i], 0, j, 0) < 0)
 				return -1;
 			if (perfcnt_disable(perfcnt[i], j) < 0)
 				return -1;

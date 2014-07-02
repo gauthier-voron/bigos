@@ -53,7 +53,7 @@ int __legacy_enable(struct legacy_perfcnt *this, unsigned long evt,
 	
 	if (setcore(core) < 0)
 		return -1;
-	if ((ret = hypercall_wrmsr(&regs)) < 0)
+	if ((ret = hypercall_wrmsr(&regs, 0)) < 0)
 		return ret;
 
 	this->bitmask = mask;
@@ -71,14 +71,15 @@ int __legacy_disable(struct legacy_perfcnt *this, int core)
 	
 	if (setcore(core) < 0)
 		return -1;
-	if ((ret = hypercall_wrmsr(&regs)) < 0)
+	if ((ret = hypercall_wrmsr(&regs, 0)) < 0)
 		return ret;
 
 	this->bitmask = 0;
 	return ret;
 }
 
-unsigned long __legacy_read(const struct legacy_perfcnt *this, int core)
+unsigned long __legacy_read(const struct legacy_perfcnt *this, int core,
+			    int vdom)
 {
 	struct register_set regs;
 	unsigned long mask;
@@ -87,7 +88,7 @@ unsigned long __legacy_read(const struct legacy_perfcnt *this, int core)
 
 	if (setcore(core) < 0)
 		return -1;
-	if (hypercall_rdmsr(&regs) < 0)
+	if (hypercall_rdmsr(&regs, 0) < 0)
 		return -1;
 
 	mask = ((unsigned long) regs.edx << 32) | (regs.eax & 0xffffffff);
@@ -97,7 +98,7 @@ unsigned long __legacy_read(const struct legacy_perfcnt *this, int core)
 		regs.edx = this->bitmask >> 32;
 		if (setcore(core) < 0)
 			return -1;
-		hypercall_wrmsr(&regs);
+		hypercall_wrmsr(&regs, 0);
 
 		return -1;
 	}
@@ -106,14 +107,14 @@ unsigned long __legacy_read(const struct legacy_perfcnt *this, int core)
 	
 	if (setcore(core) < 0)
 		return -1;
-	if (hypercall_rdmsr(&regs) < 0)
+	if (hypercall_rdmsr(&regs, vdom) < 0)
 		return -1;
 
 	return ((unsigned long) regs.edx << 32) | (regs.eax & 0xffffffff);
 }
 
 int __legacy_write(const struct legacy_perfcnt *this, unsigned long val,
-		   int core)
+		   int core, int vdom)
 {
 	struct register_set regs;
 
@@ -123,7 +124,7 @@ int __legacy_write(const struct legacy_perfcnt *this, unsigned long val,
 	
 	if (setcore(core) < 0)
 		return -1;
-	return hypercall_wrmsr(&regs);
+	return hypercall_wrmsr(&regs, vdom);
 }
 
 #define LEGACY_SUPER { (perfcnt_bitsize_t)  __legacy_bitsize,		\

@@ -56,7 +56,7 @@ int __legacy_enable(const struct perfcnt *this, unsigned long evt,
 	
 	if (setcore(core) < 0)
 		return -1;
-	return hypercall_wrmsr(&regs);
+	return hypercall_wrmsr(&regs, 0);
 }
 
 int __legacy_disable(const struct perfcnt *this, int core)
@@ -69,10 +69,10 @@ int __legacy_disable(const struct perfcnt *this, int core)
 	
 	if (setcore(core) < 0)
 		return -1;
-	return hypercall_wrmsr(&regs);
+	return hypercall_wrmsr(&regs, 0);
 }
 
-unsigned long __legacy_read(const struct perfcnt *this, int core)
+unsigned long __legacy_read(const struct perfcnt *this, int core, int vdom)
 {
 	struct register_set regs;
 
@@ -80,13 +80,14 @@ unsigned long __legacy_read(const struct perfcnt *this, int core)
 	
 	if (setcore(core) < 0)
 		return -1;
-	if (hypercall_rdmsr(&regs) < 0)
+	if (hypercall_rdmsr(&regs, vdom) < 0)
 		return -1;
 
 	return ((unsigned long) regs.edx << 32) | (regs.eax & 0xffffffff);
 }
 
-int __legacy_write(const struct perfcnt *this, unsigned long val, int core)
+int __legacy_write(const struct perfcnt *this, unsigned long val, int core,
+		   int vdom)
 {
 	struct register_set regs;
 
@@ -96,7 +97,7 @@ int __legacy_write(const struct perfcnt *this, unsigned long val, int core)
 	
 	if (setcore(core) < 0)
 		return -1;
-	return hypercall_wrmsr(&regs);
+	return hypercall_wrmsr(&regs, vdom);
 }
 
 #define LEGACY_SUPER { __legacy_bitsize, __legacy_hasevt, __legacy_enable, \

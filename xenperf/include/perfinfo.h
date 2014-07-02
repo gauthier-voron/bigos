@@ -64,9 +64,11 @@ typedef int            (*perfcnt_enable_t)(const struct perfcnt *this,
 					   unsigned long umask, int core);
 typedef int            (*perfcnt_disable_t)(const struct perfcnt *this,
 					    int core);
-typedef unsigned long  (*perfcnt_read_t)(const struct perfcnt *this, int core);
+typedef unsigned long  (*perfcnt_read_t)(const struct perfcnt *this, int core,
+					 int vdom);
 typedef int            (*perfcnt_write_t)(const struct perfcnt *this,
-					  unsigned long val, int core);
+					  unsigned long val, int core,
+					  int vdom);
 
 struct perfcnt
 {
@@ -106,15 +108,16 @@ static inline int perfcnt_disable(const struct perfcnt *this, int core)
 }
 
 
-static inline unsigned long perfcnt_read(const struct perfcnt *this, int core)
+static inline unsigned long perfcnt_read(const struct perfcnt *this, int core,
+					 int vdom)
 {
-	return this->read(this, core);
+	return this->read(this, core, vdom);
 }
 
 static inline int perfcnt_write(const struct perfcnt *this, unsigned long val,
-				int core)
+				int core, int vdom)
 {
-	return this->write(this, val, core);
+	return this->write(this, val, core, vdom);
 }
 
 

@@ -54,6 +54,7 @@ int check_coreinfo(struct coreinfo *dest, int verbose)
 	if (verbose) {
 		fprintf(stderr, "core count is %d\n", dest->core_count);
 		fprintf(stderr, "node count is %d\n", dest->node_count);
+		fprintf(stderr, "domu count is %d\n", dest->vdom_count);
 	}
 
 	return 0;
