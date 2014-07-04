@@ -259,6 +259,9 @@ static void display_header(const unsigned long *events,
 				continue;
 
 			for (k=0; k<1+coreinfo->vdom_count; k++) {
+				if (coreinfo->vdom_count > 0 && k == 0)
+					continue;
+
 				printf("\t0x%02lx:%02lx(%lu)(%lu)",
 				       events[i], umasks[i], j, k);
 			}
@@ -303,8 +306,11 @@ static int display_counters(const struct perfcnt **perfcnt,
 		for (j=0; j<coreinfo->core_count; j++) {
 			if (!(cpumasks[i] & (1L << j)))
 				continue;
-			
+
 			for (k=0; k<1+coreinfo->vdom_count; k++) {
+				if (coreinfo->vdom_count > 0 && k == 0)
+					continue;
+
 				pmc = perfcnt_read(perfcnt[i], j, k);
 				
 				if (pmc == (unsigned long) -1) {

@@ -12,6 +12,8 @@
 #define HYPERCALL_WRMSR_CMD    -2
 #define HYPERCALL_RDMSR_CMD    -3
 #define HYPERCALL_COUNT_CMD    -4
+#define HYPERCALL_DEMUX_CMD    -5
+#define HYPERCALL_REMUX_CMD    -6
 
 
 static int __hypercall_perform(unsigned long cmd, unsigned long regs)
@@ -60,4 +62,14 @@ int hypercall_rdmsr(struct register_set *regs, int vdom)
 int hypercall_domcount(unsigned int *count)
 {
 	return __hypercall_perform(HYPERCALL_COUNT_CMD, (unsigned long) count);
+}
+
+int hypercall_demux(struct register_set *regs)
+{
+	return __hypercall_perform(HYPERCALL_DEMUX_CMD, (unsigned long) regs);
+}
+
+int hypercall_remux(struct register_set *regs)
+{
+	return __hypercall_perform(HYPERCALL_REMUX_CMD, (unsigned long) regs);
 }

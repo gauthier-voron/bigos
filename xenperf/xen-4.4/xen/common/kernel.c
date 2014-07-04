@@ -216,6 +216,21 @@ void __init do_initcalls(void)
 # define DO(fn) long do_##fn
 
 
+
+/* extern unsigned int bigos_count_domain(void); */
+
+/* extern void bigos_start_demux(unsigned long msr_addr); */
+
+/* extern void bigos_stop_demux(unsigned long msr_addr); */
+
+/* extern unsigned long bigos_read_demux(unsigned long msr_addr, */
+/*                                       unsigned long domain); */
+
+/* extern void bigos_write_demux(unsigned long msr_addr, */
+/*                               unsigned long domain, */
+/*                               unsigned long value); */
+
+
 struct bigos_register_set
 {
     unsigned int eax;
@@ -223,6 +238,7 @@ struct bigos_register_set
     unsigned int ecx;
     unsigned int edx;
 };
+
 
 void bigos_do_rdmsr(struct bigos_register_set *regs)
 {
@@ -243,8 +259,64 @@ void bigos_do_wrmsr(const struct bigos_register_set *regs)
 }
 
 
+unsigned int bigos_count_domain(void)
+{
+    return 2;
+}
+
+void bigos_start_demux(unsigned long msr_addr)
+{
+}
+
+void bigos_stop_demux(unsigned long msr_addr)
+{
+}
+
+unsigned long bigos_read_demux(unsigned long msr_addr,
+                               unsigned long domain)
+{
+    struct bigos_register_set regs;
+    regs.ecx = msr_addr;
+    bigos_do_rdmsr(&regs);
+    return (((unsigned long) regs.edx) << 32) | (regs.eax & 0xffffffff);
+}
+
+void bigos_write_demux(unsigned long msr_addr,
+                       unsigned long domain,
+                       unsigned long value)
+{
+    struct bigos_register_set regs;
+    regs.ecx = msr_addr;
+    regs.edx = value << 32;
+    regs.eax = value & 0xffffffff;
+    bigos_do_wrmsr(&regs);
+}
+
+
 int bigos_probe(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 {
+    return 0;
+}
+
+int bigos_demux(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+{
+    struct bigos_register_set regs;
+
+    if (copy_from_guest(&regs, arg, 1))
+        return -EFAULT;
+    bigos_start_demux(regs.ecx);
+
+    return 0;
+}
+
+int bigos_remux(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
+{
+    struct bigos_register_set regs;
+
+    if (copy_from_guest(&regs, arg, 1))
+        return -EFAULT;
+    bigos_stop_demux(regs.ecx);
+
     return 0;
 }
 
@@ -257,10 +329,13 @@ int bigos_wrmsr(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
         return -EFAULT;
     domain = regs.ebx;
 
-    if (domain == 0)
+    if (domain == 0) {
         bigos_do_wrmsr(&regs);
-    else
-        regs.eax = 42;   /* TODO */
+        return 0;
+    }
+
+    bigos_write_demux(regs.ecx, domain, (((unsigned long) regs.edx) << 32)
+                      | (regs.eax & 0xffffffff));
 
     return 0;
 }
@@ -269,15 +344,19 @@ int bigos_rdmsr(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 {
     struct bigos_register_set regs;
     unsigned long domain;
+    unsigned long value;
 
     if (copy_from_guest(&regs, arg, 1))
         return -EFAULT;
     domain = regs.ebx;
 
-    if (domain == 0)
+    if (domain == 0) {
         bigos_do_rdmsr(&regs);
-    else
-        bigos_do_rdmsr(&regs);   /* TODO */
+    } else {
+        value = bigos_read_demux(regs.ecx, domain);
+        regs.edx = value >> 32;
+        regs.eax = value & 0xffffffff;
+    }
 
     if (copy_to_guest(arg, &regs, 1))
         return -EFAULT;
@@ -286,7 +365,7 @@ int bigos_rdmsr(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 
 int bigos_count(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 {
-    unsigned long count = 2;
+    unsigned long count = bigos_count_domain();
 
     if (copy_to_guest(arg, &count, 1))
         return -EFAULT;
@@ -296,13 +375,17 @@ int bigos_count(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 
 #else
 
-#define bigos_probe(cmd, arg)  (-1)
+#define bigos_probe(cmd, arg)        (-1)
 
-#define bigos_wrmsr(cmd, arg)  (-1)
+#define bigos_demux(cmd, arg)        (-1)
 
-#define bigos_rdmsr(cmd, arg)  (-1)
+#define bigos_remux(cmd, arg)        (-1)
 
-#define bigos_count(cmd, arg)  (-1)
+#define bigos_wrmsr(cmd, arg)        (-1)
+
+#define bigos_rdmsr(cmd, arg)        (-1)
+
+#define bigos_count(cmd, arg)        (-1)
 
 #endif
 
@@ -315,6 +398,8 @@ int bigos_count(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 #define BIGOS_HYPERCALL_WRMSR_CMD   -2
 #define BIGOS_HYPERCALL_RDMSR_CMD   -3
 #define BIGOS_HYPERCALL_COUNT_CMD   -4
+#define BIGOS_HYPERCALL_DEMUX_CMD   -5
+#define BIGOS_HYPERCALL_REMUX_CMD   -6
 
 DO(xen_version)(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 {
@@ -336,6 +421,14 @@ DO(xen_version)(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
     case BIGOS_HYPERCALL_COUNT_CMD:
     {
         return bigos_count(cmd, arg);
+    }
+    case BIGOS_HYPERCALL_DEMUX_CMD:
+    {
+        return bigos_demux(cmd, arg);
+    }
+    case BIGOS_HYPERCALL_REMUX_CMD:
+    {
+        return bigos_remux(cmd, arg);
     }
 
     case XENVER_version:

@@ -55,8 +55,11 @@ int __legacy_enable(struct legacy_perfcnt *this, unsigned long evt,
 		return -1;
 	if ((ret = hypercall_wrmsr(&regs, 0)) < 0)
 		return ret;
-
 	this->bitmask = mask;
+
+	regs.ecx = this->counter;
+	if ((ret = hypercall_demux(&regs)) < 0)
+		return ret;
 	return ret;
 }
 
@@ -73,8 +76,11 @@ int __legacy_disable(struct legacy_perfcnt *this, int core)
 		return -1;
 	if ((ret = hypercall_wrmsr(&regs, 0)) < 0)
 		return ret;
-
 	this->bitmask = 0;
+
+	regs.ecx = this->counter;
+	if ((ret = hypercall_remux(&regs)) < 0)
+		return ret;
 	return ret;
 }
 

@@ -56,7 +56,10 @@ int __legacy_enable(const struct perfcnt *this, unsigned long evt,
 	
 	if (setcore(core) < 0)
 		return -1;
-	return hypercall_wrmsr(&regs, 0);
+	if (hypercall_wrmsr(&regs, 0) < 0)
+		return -1;
+	regs.ecx = ((struct legacy_perfcnt *) this)->counter;
+	return hypercall_demux(&regs);
 }
 
 int __legacy_disable(const struct perfcnt *this, int core)
@@ -69,7 +72,10 @@ int __legacy_disable(const struct perfcnt *this, int core)
 	
 	if (setcore(core) < 0)
 		return -1;
-	return hypercall_wrmsr(&regs, 0);
+	if (hypercall_wrmsr(&regs, 0) < 0)
+		return -1;
+	regs.ecx = ((struct legacy_perfcnt *) this)->counter;
+	return hypercall_remux(&regs);
 }
 
 unsigned long __legacy_read(const struct perfcnt *this, int core, int vdom)
