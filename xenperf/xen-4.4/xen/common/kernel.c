@@ -219,7 +219,7 @@ void __init do_initcalls(void)
 
 /* extern unsigned int bigos_count_domain(void); */
 
-/* extern void bigos_start_demux(unsigned long msr_addr); */
+/* extern void bigos_init_demux(unsigned long msr_addr); */
 
 /* extern void bigos_stop_demux(unsigned long msr_addr); */
 
@@ -264,7 +264,7 @@ unsigned int bigos_count_domain(void)
     return 2;
 }
 
-void bigos_start_demux(unsigned long msr_addr)
+void bigos_init_demux(unsigned long msr_addr)
 {
 }
 
