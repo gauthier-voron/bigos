@@ -219,7 +219,7 @@ void __init do_initcalls(void)
 
 /* extern unsigned int bigos_count_domain(void); */
 
-/* extern void bigos_init_demux(unsigned long msr_addr); */
+extern void bigos_init_demux(unsigned long msr_addr);
 
 /* extern void bigos_stop_demux(unsigned long msr_addr); */
 
@@ -264,10 +264,10 @@ unsigned int bigos_count_domain(void)
     return 2;
 }
 
-void bigos_init_demux(unsigned long msr_addr)
+/*void bigos_init_demux(unsigned long msr_addr)
 {
 }
-
+*/
 void bigos_stop_demux(unsigned long msr_addr)
 {
 }
@@ -304,7 +304,7 @@ int bigos_demux(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
 
     if (copy_from_guest(&regs, arg, 1))
         return -EFAULT;
-    bigos_start_demux(regs.ecx);
+    bigos_init_demux(regs.ecx);
 
     return 0;
 }

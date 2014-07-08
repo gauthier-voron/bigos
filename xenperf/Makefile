@@ -24,6 +24,8 @@ CCFLAGS := -Wall -Wextra
 LDFLAGS := -lxenctrl
 INCLUDE := -I$(INC)
 
+NBCORES := $(shell cat /proc/cpuinfo | grep processor | wc -l)
+CORES_COMP := $$(( $(NBCORES) * 2 ))
 
 V ?= 1
 ifeq ($(V),1)
@@ -67,9 +69,9 @@ check: $(BIN)xenperf
 xen: $(XEN-DIR)dist/install/boot/
 $(XEN-DIR)dist/install/boot/: $(shell find $(XEN) -name "*.c")
 	rsync -aAHXvz --exclude="*~" $(XEN) $(XEN-DIR)
-	make -C $(XEN-DIR) -j 4 --no-print-directory dist-xen
-	sudo make -C $(XEN-DIR) -j 4 --no-print-directory install-xen
-	sudo reboot
+	make -C $(XEN-DIR) -j $(CORES_COMP) --no-print-directory xen
+#	sudo make -C $(XEN-DIR) -j $(NB_CORES) --no-print-directory install-xen
+#	sudo reboot
 
 
 $(BIN)xenperf: $(patsubst $(SRC)%.c, $(OBJ)%.o, $(foreach subdir, $(SRC) \
