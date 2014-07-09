@@ -1,0 +1,51 @@
+#!/usr/bin/perl -wl
+use strict;
+
+my $NAME = shift;
+my @NAMS = @ARGV;
+my ($log, $pid);
+my @fields;
+my ($go, $time, %sums, %count);
+
+# Check if no process is selected
+$NAME || exit 1;
+scalar @NAMS > 0 || exit 1;
+
+# Prepare the log and pid files
+open $log, '>', "$NAME.log" || exit 1;
+
+open $pid, '>', "$NAME.pid" || exit 1;
+print $pid $$;
+close $pid;
+
+# Do the measure
+printf $log '#time ';
+print $log (join ' ', @NAMS);
+
+$time = 0;
+while (1) {
+    sleep 1;
+    $time++;
+
+    $sums{$_} = 0 foreach (@NAMS);
+    $count{$_} = 0 foreach (@NAMS);
+
+    foreach (split "\n", `ps aux`) {
+	@fields = split /\s+/, $_, 11;
+	foreach (@NAMS) {
+	    next unless ($fields[-1] =~ /$_/);
+	    $sums{$_} += $fields[3];
+	    $count{$_}++;
+	    $go = 1;
+	}
+    }
+
+    next unless ($go);
+
+    printf $log $time;
+    foreach (@NAMS) {
+	$sums{$_} /= $count{$_} if ($count{$_});
+	printf $log ' ' . $sums{$_};
+    }
+    print $log '';
+}

@@ -1,0 +1,58 @@
+#!/bin/sh
+
+SOURCE=$1; shift
+TARGET=$1; shift
+FILES=$@
+
+# Check arguments
+[ -e "$SOURCE" ] || exit 1
+cp "$SOURCE" "$TARGET" || exit 1
+
+# Check if root
+[ `whoami` == 'root' ] || exit 1
+
+# Prepare environment
+TARGET=`realpath $TARGET`
+dir="${TARGET%/*}"
+file="${TARGET##*/}"
+cd "$dir" || (rm "$TARGET" ; exit 1)
+mkdir "$file.dir" || (rm "$file" ; exit 1)
+
+die() {
+    cd "$dir"
+    rm "$file"
+    rm -rf "$file.dir"
+    exit 1
+}
+
+# Unpack the ramfs
+mv "$file" "$file.gz"
+gunzip "$file.gz" || die
+cd "$file.dir" || die
+cpio -iv < "../$file" || die
+
+# Add the modules
+KERNEL=`ls lib/modules`
+for mod in $FILES ; do
+    cp $mod lib/modules/$KERNEL/kernel/
+done
+
+# Unzip the modules
+cd lib/modules/$KERNEL/kernel
+for gz in *.gz ; do
+    gunzip $gz
+done
+cd ../../../..
+
+for modf in $FILES ; do
+    mod=lib/modules/$KERNEL/kernel/${modf##*/}
+    mod=${mod%.gz}
+    sed -i "/#!\// a insmod $mod" init
+done
+
+# Repack the ramfs
+find . | cpio -ov -H newc > "../$file" || die
+cd ..
+gzip -9 "$file" || die
+mv "$file.gz" "$file" || die
+rm -rf "$file.dir"

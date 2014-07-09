@@ -1,0 +1,8 @@
+#!/bin/sh
+
+PARS="parsec-3.0"
+CPUS=48
+
+cd "/tmp/$PARS" || exit 1
+source ./env.sh || exit 1
+parsecmgmt -a run -p streamcluster -n $CPUS -i native || exit 1

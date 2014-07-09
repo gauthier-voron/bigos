@@ -1,0 +1,91 @@
+#!/bin/sh
+
+VMDIR=$1 ; shift
+VMROOT="$VMDIR/xvda1.ext4"
+VMRAM="$VMDIR/initramfs.img"
+VMMNT="$VMDIR/mnt"
+VMCONF="$VMDIR/xen-config.conf"
+
+SIZEK=`df | grep ' /$' | awk '{print $2 }'`
+SIZEG=`echo $(( $SIZEK / 1000000 ))`
+[ $SIZEG == '0' ] && SIZEG=1
+
+MEM=$1 ; shift
+[ "x$MEM" == "x" ] && MEM=2G
+MEM=`perl -wl -e '$_=shift; /(.*)[Gg]$/ and print $1*1000000000 or print' $MEM`
+MEM=`perl -wl -e '$_=shift; /(.*)[Mm]$/ and print $1*1000000 or print' $MEM`
+MEM=`perl -wl -e '$_=shift; /(.*)[Kk]$/ and print $1*1000 or print' $MEM`
+MEM=`echo $MEM | sed -r 's/(.*)......$/\1/'`
+
+die() {
+    umount "$VMMNT" 2>/dev/null
+    rm -rf "$VMDIR"
+    exit 1
+}
+
+# Create the base directories
+mkdir "$VMDIR" || exit 1
+mkdir "$VMMNT"
+
+# Detect the current ramfs
+RAMFS=
+for f in /boot/init* ; do
+    [ "x$RAMFS" == "x" ] || break
+    [ "$f" == "/boot/initramfs-linux.img" ] && RAMFS="$f"
+    [ "$f" == "/boot/initrd.img-`uname -r`" ] && KERNEL="$f"
+done
+[ "x$RAMFS" == "x" ] && die
+
+# Detect the current kernel
+KERNEL=
+for f in /boot/vmlinuz-* ; do
+    [ "x$KERNEL" == "x" ] || break
+    [ "$f" == "/boot/vmlinuz-linux" ] && KERNEL="$f"
+    [ "$f" == "/boot/vmlinuz-`uname -r`" ] && KERNEL="$f"
+done
+[ "x$KERNEL" == "x" ] && die
+
+# Create and format the root partition
+truncate -s ${SIZEG}G "$VMROOT"
+mkfs.ext4 "$VMROOT"
+mount -o loop "$VMROOT" "$VMMNT" || die
+
+# Synchronize with the host root partition
+rsync -aAHXzv --delete-delay                              \
+  --exclude={/mnt/*,/home/*,/dev/*,/media/*}              \
+  --exclude={/proc/*,/run/*,/tmp/*,/sys/*,/var/cache/*}   \
+  / "$VMMNT/" || die
+
+# Modify the fstab to correspond to a Xen system
+(
+    echo '#' 
+    echo '# /etc/fstab: static file system information'
+    echo '#'
+    echo '# <file system><dir><type><options><dump><pass>'
+    echo ''
+    echo '/dev/xvda1 / ext4 rw,relatime,data=ordered 0 1'
+) >"$VMMNT/etc/fstab"
+
+# Modify the hostname
+echo "$VMDIR" > "$VMMNT/etc/hostname"
+
+# Umount the root to be ready
+umount "$VMMNT"
+
+# Add the xen modules to a cpoy of the ramfs
+dir="/lib/modules/`uname -r`/kernel/drivers/block"
+./boot/ramfs-add-modules "$RAMFS" "$VMRAM" `find "$dir" -type f -name "*xen*"`
+
+# Write the xen configuration file
+(
+    echo "kernel = \"$KERNEL\""
+    echo "ramdisk = \"`realpath $VMRAM`\""
+    echo "memory = $MEM"
+    echo "name = \"$VMDIR\""
+    echo "disk = [\"`realpath $VMROOT`,raw,xvda1,w\"]"
+    echo "root = \"/dev/xvda1 ro\""
+    echo "extra = \"console=hvc0 xencons=tty\""
+) >"$VMCONF"
+
+
+# TODO: change tty1 => hvc0

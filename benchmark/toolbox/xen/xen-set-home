@@ -1,0 +1,64 @@
+#!/bin/sh
+
+VMDIR=$1 ; shift
+VMROOT="$VMDIR/xvda1.ext4"
+VMMNT="$VMDIR/mnt"
+VMCONF="$VMDIR/xen-config.conf"
+HOME=$1 ; shift
+VMHOME="$VMDIR/xvda2.ext4"
+
+SIZE=$1; shift
+
+
+die() {
+    umount "$VMMNT" 2>/dev/null
+    rm "$VMHOME"
+    exit 1
+}
+
+
+# Check if the indicated vm exists
+[ -d "$VMDIR" ] || exit 1
+[ -d "$VMMNT" ] || exit 1
+[ -f "$VMROOT" ] || exit 1
+[ -f "$VMCONF" ] || exit 1
+
+# Check if the wanted home exists
+[ -d "$HOME" ] || exit 1
+
+
+# Compute the home size
+[ "x$SIZE" == "x" ] && SIZE=`du -sh $HOME | awk '{print $1}'`
+SIZE=`perl -wl -e '$_=shift; /(.*)[Gg]$/ and print $1*1000000000 or print' \
+      $SIZE`
+SIZE=`perl -wl -e '$_=shift; /(.*)[Mm]$/ and print $1*1000000 or print' $SIZE`
+SIZE=`perl -wl -e '$_=shift; /(.*)[Kk]$/ and print $1*1000 or print' $SIZE`
+SIZE=`echo $(( $SIZE / 1000000000 + 1 ))`
+
+
+# Create and format the home partition
+truncate -s ${SIZE}G "$VMHOME" || die
+mkfs.ext4 "$VMHOME"
+mount -o loop "$VMHOME" "$VMMNT" || die
+
+# Synchronize with the host root partition
+rsync -aAHXzv --delete-delay "$HOME/" "$VMMNT/" || die
+
+# Umount the home
+umount "$VMMNT"
+
+# Mount the root to change fstab
+mount -o loop "$VMROOT" "$VMMNT" || exit 1
+
+# Add the xvda2 entry to the fstab
+sed -ri 's/^\/dev\/xvda2.*$//' "$VMMNT/etc/fstab"
+echo '/dev/xvda2 /home ext4 rw,relatime,data=ordered 0 2' \
+  >>"$VMMNT/etc/fstab"
+
+# Umount the root
+umount "$VMMNT"
+
+# Add the home in the xen config
+sed -ri 's/^disk(.*)"([^"]+)xvda2[^"]+",?(.*)/disk\1\3/' "$VMCONF"
+insert=\"`realpath "$VMHOME" | sed -r 's/\//\\\\\//g'`,raw,xvda2,w\"
+sed -ri "s/^disk(.*)\\[(.*)/disk\\1[$insert,\\2/" "$VMCONF"

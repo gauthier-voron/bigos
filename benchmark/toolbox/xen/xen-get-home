@@ -1,0 +1,30 @@
+#!/bin/sh
+
+VMDIR=$1 ; shift
+VMMNT="$VMDIR/mnt"
+HOME=$1 ; shift
+VMHOME="$VMDIR/xvda2.ext4"
+
+
+die() {
+    umount "$VMMNT" 2>/dev/null
+    rm "$VMHOME"
+    exit 1
+}
+
+
+# Check if the indicated vm exists
+[ -d "$VMDIR" ] || exit 1
+[ -d "$VMMNT" ] || exit 1
+
+# Check if the wanted home exists
+[ -d "$HOME" ] || mkdir "$HOME" || exit 1
+
+# Mount the home
+mount -o loop "$VMHOME" "$VMMNT" || die
+
+# Synchronize with the host root partition
+rsync -aAHXzv --delete-delay "$VMMNT/" "$HOME/" || die
+
+# Umount the home
+umount "$VMMNT"

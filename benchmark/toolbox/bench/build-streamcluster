@@ -1,0 +1,13 @@
+#!/bin/sh
+
+ADDR="http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-core.tar.gz"
+TARZ="parsec.tar.gz"
+PARS="parsec-3.0"
+
+cd /tmp || exit 1
+[ -e "$TARZ" ] || curl "$ADDR" > "$TARZ" || exit 1
+tar -xzf "$TARZ" || exit 1
+
+cd "$PARS" || exit 1
+source ./env.sh || exit 1
+parsecmgmt -a build -p streamcluster || exit 1
