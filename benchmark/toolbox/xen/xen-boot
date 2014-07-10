@@ -1,13 +1,62 @@
 #!/bin/sh
 
-error() {
+die() {
     MSG=$1; shift
     echo "$0: $MSG" 1>&2
     exit 1
 }
 
-VMNAME=$1; shift
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    continue
+}
 
-xl list |grep -Eq "^$VMNAME\s+" && error "virtual machine '$VMNAME' already up"
-xl create "$VMNAME/xen-config.conf" \
-    || error "cannot boot virtual machine '$VMNAME'"
+
+# Pre-detect if enought memory for all vms and globally abort if not
+
+globalfree=`xl info | grep free_memory | awk '{print $3}'`    # available mem
+globalreq=0                                                   # requested mem
+
+for VMNAME in "$@" ; do
+
+    # Check if the VM exists
+    [ -d "$VMNAME" ] || error "cannot find virtual machine '$VMNAME'"
+    [ -e "$VMNAME/xen-config.conf" ] \
+	|| error "cannot finc '$VMNAME/xen-config.conf'"
+
+    # Find the requested memory in the configuration file
+    req=`cat "$VMNAME/xen-config.conf" | grep memory |
+         sed -r 's/^[^[:digit:]]+([[:digit:]]+)/\1/'`
+    globalreq=$(( $globalreq + $req ))
+
+done
+
+# Die if more requested than available
+
+[ $globalreq -ge $globalfree ] \
+    && die "cannot allocate ${globalreq}M of memory, ${globalfree}M available"
+
+
+
+for VMNAME in "$@" ; do
+
+    # Check the virtual machine is nt already running
+    xl list | grep -Eq "^$VMNAME\s+" \
+	&& error "virtual machine '$VMNAME' already up"
+
+    # Create the virtual machine with xl
+    # Create in parallel since it take time to xen to allocate memory
+    (
+	xl create "$VMNAME/xen-config.conf" \
+	    >/dev/null || error "cannot boot virtual machine '$VMNAME'"
+    ) &
+
+done
+
+# If no argument is provided, exit with an error
+[ "x$VMNAME" == "x" ] && die "no virtual machine name given"
+
+# If it were, some 'xl create' have been launched asynchronously, wait it
+wait
+exit 0
