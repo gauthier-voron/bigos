@@ -1,48 +1,115 @@
 #!/bin/sh
 
-VMDIR=$1 ; shift
-VMROOT="$VMDIR/xvda1.ext4"
-VMMNT="$VMDIR/mnt"
-VMCONF="$VMDIR/xen-config.conf"
-HOME=$1 ; shift
-VMHOME="$VMDIR/xvda2.ext4"
+# VMDIR=$1 ; shift
+# VMROOT="$VMDIR/xvda1.ext4"
+# VMMNT="$VMDIR/mnt"
+# VMCONF="$VMDIR/xen-config.conf"
+# HOME=$1 ; shift
+# VMHOME="$VMDIR/xvda2.ext4"
 
-SIZE=$1; shift
-
-
-die() {
-    umount "$VMMNT" 2>/dev/null
-    rm "$VMHOME"
-    exit 1
-}
+# SIZE=$1; shift
 
 
-# Check if the indicated vm exists
-[ -d "$VMDIR" ] || exit 1
-[ -d "$VMMNT" ] || exit 1
-[ -f "$VMROOT" ] || exit 1
-[ -f "$VMCONF" ] || exit 1
+# Argument parsing
+# The syntax of the command is:
+#   xen-set-home VIRTMAC... HOME [SIZE]
+# So if the last argument is a valid size (<digits><suffix>), the VIRTMAC are
+# all but the two last arguments, else their are all but the last arguments.
 
-# Check if the wanted home exists
+VMCOUT=0
+HSHOME=
+HSSIZE=
+
+for VMDIR in "$@" ; do
+    HSHOME="$HSSIZE"
+    HSSIZE="$VMDIR"
+    VMCOUT=$(( $VMCOUT + 1 ))
+done
+
+if echo "$HSSIZE" | grep -qE '^[[:digit:]]+\.?[[:digit:]]*[GgMmKk]?$' ; then
+    VMCOUT=$(( $VMCOUT - 2 ))
+else
+    HSHOME="$HSSIZE"
+    HSSIZE=
+    VMCOUT=$(( $VMCOUT - 1 ))
+fi
+
+
+# If no size is provided, then compute one which is the size of the given
+# host directory + 1G
+# Compute the home size
+if [ "x$HSSIZE" == "x" ] ; then
+    HSSIZE=`du -s $HOME | awk '{print $1}'`     # du give size in Kilobytes
+    HSSIZE=$(( $HSSIZE + 1000000 ))
+    HSSIZE=${HSSIZE}K
+fi
+
+# Now resolve the prefixes to put the size in bytes
+HSSIZE=`perl -wl -e '$_=shift; /(.*)[Gg]$/ \
+        and print $1*1000000000 or print' $HSSIZE`    # Resolve Giga prefix
+HSSIZE=`perl -wl -e '$_=shift; /(.*)[Mm]$/ \
+        and print $1*1000000 or print' $HSSIZE`       # Resolve Mega prefix
+HSSIZE=`perl -wl -e '$_=shift; /(.*)[Kk]$/ \
+        and print $1*1000 or print' $HSSIZE`          # Resolve Kilo prefix
+
+
+# Check if the host home exists
 [ -d "$HOME" ] || exit 1
 
 
-# Compute the home size
-[ "x$SIZE" == "x" ] && SIZE=`du -sh $HOME | awk '{print $1}'`
-SIZE=`perl -wl -e '$_=shift; /(.*)[Gg]$/ and print $1*1000000000 or print' \
-      $SIZE`
-SIZE=`perl -wl -e '$_=shift; /(.*)[Mm]$/ and print $1*1000000 or print' $SIZE`
-SIZE=`perl -wl -e '$_=shift; /(.*)[Kk]$/ and print $1*1000 or print' $SIZE`
-SIZE=`echo $(( $SIZE / 1000000000 + 1 ))`
+# Now the arguments are parsed, we can process
+# Even if the same logical home is affected to all of the vm, their are in
+# read/write mode, so perform deep copy
+# If the operation fails for one of the vm, rollback and go next
 
+die () {
+    MSG=$1; shift
+    echo "$0: $MSG" >&2
+    umount "$VMMNT" 2>/dev/null
+    [ "x$file" == "x" ] || rm "$file" 2>/dev/null
+    exit 1
+}
 
-# Create and format the home partition
-truncate -s ${SIZE}G "$VMHOME" || die
-mkfs.ext4 -F "$VMHOME"
-mount -o loop "$VMHOME" "$VMMNT" || die
+error () {
+    MSG=$1; shift
+    echo "$0: $MSG" >&2
+    continue
+}
 
-# Synchronize with the host root partition
-rsync -aAHXzv --delete-delay "$HOME/" "$VMMNT/" || die
+for VMDIR in "$@" ; do
+    [ $VMCOUT -eq 0 ] && break
+    VMCOUT=$(( $VMCOUT - 1 ))
 
-# Umount the home
-umount "$VMMNT"
+    VMROOT="$VMDIR/xvda1.ext4"
+    VMHOME="$VMDIR/xvda2.ext4"
+    VMMNT="$VMDIR/mnt"
+    VMCONF="$VMDIR/xen-config.conf"
+
+    [ -d "$VMDIR" ] || error "cannot find vm '$VMDIR'"
+    [ -d "$VMMNT" ] || error "cannot find '$VMMNT' for vm '$VMDIR'"
+    [ -f "$VMROOT" ] || error "cannot find '$VMROOT' for vm '$VMDIR'"
+    [ -f "$VMCONF" ] || error "cannot find '$VMCONF' for vm '$VMDIR'"
+    [ -f "$VMHOME" ] || error "cannot find '$VMHOME' for vm '$VMDIR'"
+
+    # Make a new ext4 file system of the given size in a temp file
+    file=`mktemp $VMHOME.XXXXXXX`
+    truncate -s $HSSIZE "$file" \
+	2>/dev/null || error "cannot allocate $HSSIZE for '$file'"
+    mkfs.ext4 -F "$file" \
+	>/dev/null 2>/dev/null || error "cannot make ext4 fs in '$file'"
+
+    # Mount the new file system
+    mount -o loop "$file" "$VMMNT" \
+	2>/dev/null || error "cannot mount on '$VMMNT'"
+
+    # Synchronize the host home and the new virtual partition
+    rsync -aAHXzsq --delete-delay "$HSHOME/" "$VMMNT/" \
+	2>/dev/null || error "cannot synchronize '$HSHOME' with '$VMMNT'"
+
+    # Umount the partition
+    umount "$VMMNT" 2>/dev/null 
+
+    # Commit the temp file into xvda2
+    mv "$file" "$VMHOME" 2>/dev/null 
+    file=
+done
