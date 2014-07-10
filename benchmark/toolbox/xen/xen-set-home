@@ -1,15 +1,5 @@
 #!/bin/sh
 
-# VMDIR=$1 ; shift
-# VMROOT="$VMDIR/xvda1.ext4"
-# VMMNT="$VMDIR/mnt"
-# VMCONF="$VMDIR/xen-config.conf"
-# HOME=$1 ; shift
-# VMHOME="$VMDIR/xvda2.ext4"
-
-# SIZE=$1; shift
-
-
 # Argument parsing
 # The syntax of the command is:
 #   xen-set-home VIRTMAC... HOME [SIZE]
