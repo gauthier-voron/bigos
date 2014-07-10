@@ -69,7 +69,7 @@ mkfs.ext4 "$VMHOME"
     echo '# <file system><dir><type><options><dump><pass>'
     echo ''
     echo '/dev/xvda1 / ext4 ro,relatime,data=ordered 0 1'
-    echo '/dev/xvda2 /home ext4 ro,relatime,data=ordered 0 1'
+    echo '/dev/xvda2 /home ext4 rw,relatime,data=ordered 0 1'
 ) >"$VMMNT/etc/fstab"
 
 # Modify the hostname

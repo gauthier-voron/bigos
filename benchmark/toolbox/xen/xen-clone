@@ -9,6 +9,7 @@ die() {
 error() {
     MSG=$1; shift
     echo "$0: $MSG" 1>&2
+    [ -e "$VMDEST" ] && rm -rf "$VMDEST" 2>/dev/null
     continue
 }
 
