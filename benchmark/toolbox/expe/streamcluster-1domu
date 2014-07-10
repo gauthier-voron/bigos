@@ -1,0 +1,63 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+VMNAME=xen-vm-0
+RESULTS=`date +'%Y-%m-%d-%H-%M-%S'`
+
+mkdir "$RESULTS" || error "cannot mkdir '$RESULTS'"
+mkdir "$RESULTS/tools" || exit 1
+
+build-streamcluster "$RESULTS/parsec" || exit 1
+cp `which streamcluster` "$RESULTS/tools"
+cp `which cpurate` "$RESULTS/tools"
+cp `which memrate` "$RESULTS/tools"
+echo 'ready to shutdown' > "$RESULTS/magic"
+
+xen-create "$VMNAME" || exit 1
+xen-set-home "$VMNAME" "$RESULTS" || exit 1
+xl create "$VMNAME/xen-config.conf" || exit 1
+
+echo "=== Waiting login to the vm"
+while true ; do
+    echo 'root' | xl console "$VMNAME" | grep -q 'command not found' && break
+    sleep 1
+done
+echo "=== Logged to the vm"
+
+(
+    echo 'cd /home'
+    echo 'PATH=$PATH:$PWD/tools'
+    echo 'cpurate cpu streamcluster &'
+    echo 'memrate mem streamcluster &'
+    echo 'streamcluster parsec'
+    echo 'kill `cat cpu.pid`'
+    echo 'kill `cat mem.pid`'
+    echo 'sync'
+    echo 'while true ; do cat magic ; sleep 1 ; done'
+) | xl console "$VMNAME" >/dev/null
+echo "=== Benchmark is now running"
+
+echo "=== Waiting shutdown signal"
+while true ; do
+    echo '' | xl console "$VMNAME" \
+	| grep -q -E 'ready to shutdown' && break
+    sleep 1
+done
+echo "=== Shutdown signal received"
+
+xl shutdown "$VMNAME" || exit 1
+
+echo "=== Waiting end of shutdown"
+while true ; do
+    xl list | grep -q "$VMNAME" || break
+    sleep 1
+done
+echo "=== The vm is now down"
+
+xen-get-home "$VMNAME" "$RESULTS" || exit 1
+rm -rf "$VMNAME"

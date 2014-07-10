@@ -1,0 +1,42 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+VMSRC=$1; shift
+VMDEST=$1; shift
+
+# Check if the source exists
+[ -d "$VMSRC" ] || error "cannot find '$VMSRC'"
+
+# Create the base directories
+mkdir "$VMDEST" || exit 1
+
+
+die() {
+    MSG=$1; shift
+    rm -rf "$VMDEST"
+    error "$MSG"
+}
+
+mkdir "$VMDEST/mnt" || die "cannot create '$VMDEST/mnt'"
+ln "$VMSRC/initramfs.img" "$VMDEST/initramfs.img" || die "cannot copy ramfs"
+ln "$VMSRC/xvda1.ext4" "$VMDEST/xvda1.ext4" || die "cannot copy root disk"
+cp "$VMSRC/xen-config.conf" "$VMDEST/xen-config.conf" || die "cannot copy conf"
+
+sed -ri '/^\s*ramdisk/d' "$VMDEST/xen-config.conf"
+sed -ri '/^\s*disk/d' "$VMDEST/xen-config.conf"
+sed -ri '/^\s*name/d' "$VMDEST/xen-config.conf"
+
+(
+    echo "ramdisk = \"`realpath $VMDEST/initramfs.img`\""
+    echo "name = \"$VMDEST\""
+    echo "disk = [\"`realpath $VMDEST/xvda1.ext4`,raw,xvda1,r\"]"
+) >>"$VMDEST/xen-config.conf"
+
+mount "$VMDEST/xvda1.ext4" "$VMDEST/mnt"
+echo "$VMDEST" > "$VMDEST/mnt/etc/hostname"
+umount "$VMDEST/mnt"

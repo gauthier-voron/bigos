@@ -63,18 +63,21 @@ rsync -aAHXzv --delete-delay                              \
     echo '#'
     echo '# <file system><dir><type><options><dump><pass>'
     echo ''
-    echo '/dev/xvda1 / ext4 rw,relatime,data=ordered 0 1'
+    echo '/dev/xvda1 / ext4 ro,relatime,data=ordered 0 1'
 ) >"$VMMNT/etc/fstab"
 
 # Modify the hostname
 echo "$VMDIR" > "$VMMNT/etc/hostname"
+
+# Remove passwords for all users
+sed -ri 's/^([^:]+):\$[^:]+:(.*)$/\1::\2/' "$VMMNT/etc/shadow"
 
 # Umount the root to be ready
 umount "$VMMNT"
 
 # Add the xen modules to a cpoy of the ramfs
 dir="/lib/modules/`uname -r`/kernel/drivers/block"
-./boot/ramfs-add-modules "$RAMFS" "$VMRAM" `find "$dir" -type f -name "*xen*"`
+ramfs-add-modules "$RAMFS" "$VMRAM" `find "$dir" -type f -name "*xen*"`
 
 # Write the xen configuration file
 (
@@ -82,10 +85,7 @@ dir="/lib/modules/`uname -r`/kernel/drivers/block"
     echo "ramdisk = \"`realpath $VMRAM`\""
     echo "memory = $MEM"
     echo "name = \"$VMDIR\""
-    echo "disk = [\"`realpath $VMROOT`,raw,xvda1,w\"]"
+    echo "disk = [\"`realpath $VMROOT`,raw,xvda1,r\"]"
     echo "root = \"/dev/xvda1 ro\""
     echo "extra = \"console=hvc0 xencons=tty\""
 ) >"$VMCONF"
-
-
-# TODO: change tty1 => hvc0

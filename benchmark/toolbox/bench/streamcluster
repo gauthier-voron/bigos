@@ -1,8 +1,15 @@
 #!/bin/sh
 
-PARS="parsec-3.0"
-CPUS=48
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
 
-cd "/tmp/$PARS" || exit 1
-source ./env.sh || exit 1
-parsecmgmt -a run -p streamcluster -n $CPUS -i native || exit 1
+PARS=$1; shift
+[ "x$PARS" == "x" ] && PARS='parsec'
+CPUS=2
+
+cd "$PARS" || error "cannot find '$PARS'"
+source ./env.sh || error "cannot find 'env.sh'"
+parsecmgmt -a run -p streamcluster -n $CPUS -i simlarge
