@@ -1,0 +1,42 @@
+#!/bin/sh
+
+die() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    continue
+}
+
+
+VMNAME=$1; shift
+COMMAND="$@"
+
+# Forge a magic random hexadecimal string and compute its "opposite"
+# We can send the desired command on the vm console and then send a command
+# saying to echo the COMPUTED opposite of the magic word, and grep it in
+# the host
+SNMAGIC=`perl -wl -e 'print map { $_=sprintf "%x",int(rand(16)); $_ } (1..20)'`
+RCMAGIC=`echo $SNMAGIC | tr '0123456789abcdef' '1032547698bacdfe'`
+
+# Check the virtual machine is running
+xl list | grep -Eq "^$VMNAME\s+" \
+    || die "virtual machine '$VMNAME' is not up"
+
+# Send the command and the opposite compute-echo instruction
+(
+    echo "$COMMAND"
+    echo "echo $SNMAGIC | tr '0123456789abcdef' '1032547698bacdfe'"
+) | xl console "$VMNAME" >/dev/null \
+    || die "virtual machine '$VMNAME' console not available"
+
+
+# Now just grep the opposite magic string
+while true ; do
+    echo '' | xl console "$VMNAME" | grep -qE "$RCMAGIC" && break
+    sleep 1
+done
