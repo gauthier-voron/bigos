@@ -41,7 +41,7 @@ done
 
 for VMNAME in "$@" ; do
 
-    # Check the virtual machine is nt already running
+    # Check the virtual machine is not already running
     xl list | grep -Eq "^$VMNAME\s+" \
 	&& error "virtual machine '$VMNAME' already up"
 

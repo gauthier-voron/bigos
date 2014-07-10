@@ -1,17 +1,36 @@
 #!/bin/sh
 
-error() {
+die() {
     MSG=$1; shift
     echo "$0: $MSG" 1>&2
     exit 1
 }
 
-VMNAME=$1; shift
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    continue
+}
 
-xl list | grep -Eq "^$VMNAME\s+" || error "virtual machine '$VMNAME' is not up"
+for VMNAME in "$@" ; do
 
-xl shutdown "$VMNAME" || error "cannot shutdown '$VMNAME'"
-while true ; do
-    xl list | grep -Eq "^$VMNAME\s+" || break
-    sleep 1
+    # Check the virtual machine is running
+    xl list | grep -Eq "^$VMNAME\s+" \
+	|| error "virtual machine '$VMNAME' is not up"
+
+    # Shutdown the virtual machine with xl
+    xl shutdown "$VMNAME" \
+	>/dev/null 2>/dev/null || error "cannot shutdown '$VMNAME'"
+
+done
+
+# If no argument is provided, exit with an error
+[ "x$VMNAME" == "x" ] && die "no virtual machine name given"
+
+# If it were, some foreach of them, wait it is really shut down
+for VMNAME in "$@" ; do
+    while true ; do
+	xl list | grep -Eq "^$VMNAME\s+" || break
+	sleep 1
+    done
 done
