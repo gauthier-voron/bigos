@@ -1,45 +1,57 @@
 #!/bin/sh
 
-error() {
+die() {
     MSG=$1; shift
     echo "$0: $MSG" 1>&2
     exit 1
 }
 
-VMSRC=$1; shift
-VMDEST=$1; shift
-
-# Check if the source exists
-[ -d "$VMSRC" ] || error "cannot find '$VMSRC'"
-
-# Create the base directories
-mkdir "$VMDEST" || exit 1
-
-
-die() {
+error() {
     MSG=$1; shift
-    rm -rf "$VMDEST"
-    error "$MSG"
+    echo "$0: $MSG" 1>&2
+    continue
 }
 
-mkdir "$VMDEST/mnt" || die "cannot create '$VMDEST/mnt'"
-ln "$VMSRC/initramfs.img" "$VMDEST/initramfs.img" || die "cannot copy ramfs"
-ln "$VMSRC/xvda1.ext4" "$VMDEST/xvda1.ext4" || die "cannot copy root disk"
-cp "$VMSRC/xen-config.conf" "$VMDEST/xen-config.conf" || die "cannot copy conf"
-truncate -s 1M "$VMDEST/xvda2.ext4" || die "cannot create home"
-mkfs.ext4 "$VMDEST/xvda2.ext4"
 
-sed -ri '/^\s*ramdisk/d' "$VMDEST/xen-config.conf"
-sed -ri '/^\s*(disk|,).*xvda/d' "$VMDEST/xen-config.conf"
-sed -ri '/^\s*name/d' "$VMDEST/xen-config.conf"
+VMSRC=$1; shift
 
-(
-    echo "ramdisk = \"`realpath $VMDEST/initramfs.img`\""
-    echo "name = \"$VMDEST\""
-    echo "disk = [\"`realpath $VMDEST/xvda1.ext4`,raw,xvda1,r\""
-    echo "       ,\"`realpath $VMDEST/xvda2.ext4`,raw,xvda2,rw\"]"
-) >>"$VMDEST/xen-config.conf"
+# Check if the source exists
+[ -d "$VMSRC" ] || die "cannot find '$VMSRC'"
+    
 
-mount "$VMDEST/xvda1.ext4" "$VMDEST/mnt"
-echo "$VMDEST" > "$VMDEST/mnt/etc/hostname"
-umount "$VMDEST/mnt"
+for VMDEST in "$@" ; do
+
+    # Create the base directories
+    mkdir "$VMDEST" \
+	2>/dev/null || error "cannot create '$VMDEST'"
+
+
+    # Perform the cheap copy of VMSRC
+    mkdir "$VMDEST/mnt" || error "cannot create '$VMDEST/mnt'"
+    ln "$VMSRC/initramfs.img" "$VMDEST/initramfs.img" \
+	2>/dev/null || error "cannot copy ramfs"
+    ln "$VMSRC/xvda1.ext4" "$VMDEST/xvda1.ext4" \
+	2>/dev/null || error "cannot copy root disk"
+    cp "$VMSRC/xen-config.conf" "$VMDEST/xen-config.conf" \
+	2>/dev/null || error "cannot copy conf"
+
+    # Create a new empty home
+    truncate -s 1M "$VMDEST/xvda2.ext4" \
+	2>/dev/null || error "cannot create home"
+    mkfs.ext4 "$VMDEST/xvda2.ext4" >/dev/null 2>/dev/null
+
+    # Update the paths in xen-config.conf
+    sed -ri '/^\s*ramdisk/d' "$VMDEST/xen-config.conf"
+    sed -ri '/^\s*(disk|,).*xvda/d' "$VMDEST/xen-config.conf"
+    sed -ri '/^\s*name/d' "$VMDEST/xen-config.conf"
+
+    (
+	echo "ramdisk = \"`realpath $VMDEST/initramfs.img`\""
+	echo "name = \"$VMDEST\""
+	echo "disk = [\"`realpath $VMDEST/xvda1.ext4`,raw,xvda1,r\""
+	echo "       ,\"`realpath $VMDEST/xvda2.ext4`,raw,xvda2,rw\"]"
+    ) >>"$VMDEST/xen-config.conf"
+done
+
+[ "x$VMDEST" == "x" ] && die "no destination specified"
+exit 0
