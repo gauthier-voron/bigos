@@ -1,0 +1,17 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+VMNAME=$1; shift
+
+xl list | grep -q "$VMNAME" || error "virtual machine '$VMNAME' is not up"
+
+xl shutdown "$VMNAME" || error "cannot shutdown '$VMNAME'"
+while true ; do
+    xl list | grep -q "$VMNAME" || break
+    sleep 1
+done

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+VMNAME=$1; shift
+
+xl list | grep -q "$VMNAME" && error "virtual machine '$VMNAME' already up"
+xl create "$VMNAME/xen-config.conf" \
+    || error "cannot boot virtual machine '$VMNAME'"

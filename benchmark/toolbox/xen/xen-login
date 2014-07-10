@@ -1,0 +1,16 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+VMNAME=$1; shift
+
+xl list | grep -q "$VMNAME" || error "virtual machine '$VMNAME' is not up"
+while true ; do
+    echo 'root' | xl console "$VMNAME" | grep -q 'command not found' && break
+    sleep 1
+done
+printf '' | xl console "$VMNAME"
