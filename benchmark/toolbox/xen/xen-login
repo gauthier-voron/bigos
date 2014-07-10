@@ -1,16 +1,30 @@
 #!/bin/sh
 
-error() {
+die() {
     MSG=$1; shift
     echo "$0: $MSG" 1>&2
     exit 1
 }
 
-VMNAME=$1; shift
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    continue
+}
 
-xl list | grep -Eq "^$VMNAME\s+" || error "virtual machine '$VMNAME' is not up"
-while true ; do
-    echo 'root' | xl console "$VMNAME" | grep -q 'command not found' && break
-    sleep 1
+for VMNAME in "$@" ; do
+
+    # Check the virtual machine is running
+    xl list | grep -Eq "^$VMNAME\s+" \
+	|| error "virtual machine '$VMNAME' is not up"
+
+    # Send the 'root' login to the expected login prompt
+    # Read the result, since root is not a valid command, try to grep
+    # a 'command not found' answer indicating we are in a shell
+    while true ; do
+	echo 'root' | xl console "$VMNAME" | grep -q 'command not found' \
+	    && break
+	sleep 1
+    done
+
 done
-printf '' | xl console "$VMNAME"
