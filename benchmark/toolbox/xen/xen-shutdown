@@ -8,10 +8,10 @@ error() {
 
 VMNAME=$1; shift
 
-xl list | grep -q "$VMNAME" || error "virtual machine '$VMNAME' is not up"
+xl list | grep -Eq "^$VMNAME\s+" || error "virtual machine '$VMNAME' is not up"
 
 xl shutdown "$VMNAME" || error "cannot shutdown '$VMNAME'"
 while true ; do
-    xl list | grep -q "$VMNAME" || break
+    xl list | grep -Eq "^$VMNAME\s+" || break
     sleep 1
 done

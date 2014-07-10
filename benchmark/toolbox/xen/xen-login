@@ -8,7 +8,7 @@ error() {
 
 VMNAME=$1; shift
 
-xl list | grep -q "$VMNAME" || error "virtual machine '$VMNAME' is not up"
+xl list | grep -Eq "^$VMNAME\s+" || error "virtual machine '$VMNAME' is not up"
 while true ; do
     echo 'root' | xl console "$VMNAME" | grep -q 'command not found' && break
     sleep 1

@@ -38,7 +38,7 @@ SIZE=`echo $(( $SIZE / 1000000000 + 1 ))`
 
 # Create and format the home partition
 truncate -s ${SIZE}G "$VMHOME" || die
-mkfs.ext4 "$VMHOME"
+mkfs.ext4 -F "$VMHOME"
 mount -o loop "$VMHOME" "$VMMNT" || die
 
 # Synchronize with the host root partition
@@ -46,19 +46,3 @@ rsync -aAHXzv --delete-delay "$HOME/" "$VMMNT/" || die
 
 # Umount the home
 umount "$VMMNT"
-
-# Mount the root to change fstab
-mount -o loop "$VMROOT" "$VMMNT" || exit 1
-
-# Add the xvda2 entry to the fstab
-sed -ri 's/^\/dev\/xvda2.*$//' "$VMMNT/etc/fstab"
-echo '/dev/xvda2 /home ext4 rw,relatime,data=ordered 0 2' \
-  >>"$VMMNT/etc/fstab"
-
-# Umount the root
-umount "$VMMNT"
-
-# Add the home in the xen config
-sed -ri 's/^disk(.*)"([^"]+)xvda2[^"]+",?(.*)/disk\1\3/' "$VMCONF"
-insert=\"`realpath "$VMHOME" | sed -r 's/\//\\\\\//g'`,raw,xvda2,w\"
-sed -ri "s/^disk(.*)\\[(.*)/disk\\1[$insert,\\2/" "$VMCONF"

@@ -2,6 +2,7 @@
 
 VMDIR=$1 ; shift
 VMROOT="$VMDIR/xvda1.ext4"
+VMHOME="$VMDIR/xvda2.ext4"
 VMRAM="$VMDIR/initramfs.img"
 VMMNT="$VMDIR/mnt"
 VMCONF="$VMDIR/xen-config.conf"
@@ -56,6 +57,10 @@ rsync -aAHXzv --delete-delay                              \
   --exclude={/proc/*,/run/*,/tmp/*,/sys/*,/var/cache/*}   \
   / "$VMMNT/" || die
 
+# Create an empty home partition
+truncate -s 1M "$VMHOME" || die
+mkfs.ext4 "$VMHOME"
+
 # Modify the fstab to correspond to a Xen system
 (
     echo '#' 
@@ -64,6 +69,7 @@ rsync -aAHXzv --delete-delay                              \
     echo '# <file system><dir><type><options><dump><pass>'
     echo ''
     echo '/dev/xvda1 / ext4 ro,relatime,data=ordered 0 1'
+    echo '/dev/xvda2 /home ext4 ro,relatime,data=ordered 0 1'
 ) >"$VMMNT/etc/fstab"
 
 # Modify the hostname
@@ -85,7 +91,8 @@ ramfs-add-modules "$RAMFS" "$VMRAM" `find "$dir" -type f -name "*xen*"`
     echo "ramdisk = \"`realpath $VMRAM`\""
     echo "memory = $MEM"
     echo "name = \"$VMDIR\""
-    echo "disk = [\"`realpath $VMROOT`,raw,xvda1,r\"]"
+    echo "disk = [\"`realpath $VMROOT`,raw,xvda1,r\""
+    echo "       ,\"`realpath $VMHOME`,raw,xvda2,rw\"]"
     echo "root = \"/dev/xvda1 ro\""
     echo "extra = \"console=hvc0 xencons=tty\""
 ) >"$VMCONF"

@@ -26,15 +26,18 @@ mkdir "$VMDEST/mnt" || die "cannot create '$VMDEST/mnt'"
 ln "$VMSRC/initramfs.img" "$VMDEST/initramfs.img" || die "cannot copy ramfs"
 ln "$VMSRC/xvda1.ext4" "$VMDEST/xvda1.ext4" || die "cannot copy root disk"
 cp "$VMSRC/xen-config.conf" "$VMDEST/xen-config.conf" || die "cannot copy conf"
+truncate -s 1M "$VMDEST/xvda2.ext4" || die "cannot create home"
+mkfs.ext4 "$VMDEST/xvda2.ext4"
 
 sed -ri '/^\s*ramdisk/d' "$VMDEST/xen-config.conf"
-sed -ri '/^\s*disk/d' "$VMDEST/xen-config.conf"
+sed -ri '/^\s*(disk|,).*xvda/d' "$VMDEST/xen-config.conf"
 sed -ri '/^\s*name/d' "$VMDEST/xen-config.conf"
 
 (
     echo "ramdisk = \"`realpath $VMDEST/initramfs.img`\""
     echo "name = \"$VMDEST\""
-    echo "disk = [\"`realpath $VMDEST/xvda1.ext4`,raw,xvda1,r\"]"
+    echo "disk = [\"`realpath $VMDEST/xvda1.ext4`,raw,xvda1,r\""
+    echo "       ,\"`realpath $VMDEST/xvda2.ext4`,raw,xvda2,rw\"]"
 ) >>"$VMDEST/xen-config.conf"
 
 mount "$VMDEST/xvda1.ext4" "$VMDEST/mnt"

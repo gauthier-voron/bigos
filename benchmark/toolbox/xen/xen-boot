@@ -8,6 +8,6 @@ error() {
 
 VMNAME=$1; shift
 
-xl list | grep -q "$VMNAME" && error "virtual machine '$VMNAME' already up"
+xl list |grep -Eq "^$VMNAME\s+" && error "virtual machine '$VMNAME' already up"
 xl create "$VMNAME/xen-config.conf" \
     || error "cannot boot virtual machine '$VMNAME'"
