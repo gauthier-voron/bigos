@@ -344,6 +344,7 @@ static int run_counters(const struct perfcnt **perfcnt,
 				}
 			}
 		printf("\n");
+		fflush(stdout);
 			
 		if (up) {
 			ts.tv_nsec = ((ts.tv_sec * GIGA) / 2) % GIGA
