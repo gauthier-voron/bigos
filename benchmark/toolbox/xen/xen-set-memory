@@ -70,3 +70,13 @@ for VMDIR in "$@" ; do
     sed -ri "s/\s*memory\s*=\s*([[:digit:]]+)/memory = $VMSIZE/" "$VMCONF" \
 	|| error "cannot replace the memory size in '$VMCONF'"
 done
+
+
+die() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+[ "x$VMCONF" == "x" ] && die "no destination specified"
+exit 0

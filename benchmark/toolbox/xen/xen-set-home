@@ -103,3 +103,6 @@ for VMDIR in "$@" ; do
     mv "$file" "$VMHOME" 2>/dev/null 
     file=
 done
+
+[ "x$VMCONF" == "x" ] && die "no destination specified"
+exit 0
