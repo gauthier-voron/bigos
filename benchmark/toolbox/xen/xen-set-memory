@@ -1,0 +1,72 @@
+#!/bin/sh
+
+# Argument parsing
+# The syntax of the command is:
+#   xen-set-memory VIRTMAC... [SIZE]
+# So if the last argument is a valid size (<digits><suffix>), the VIRTMAC are
+# all but the last argument, else their are all and the size is the free
+# memory divied between the vms.
+
+VMCOUT=0
+VMSIZE=
+
+for VMDIR in "$@" ; do
+    VMSIZE="$VMDIR"
+    VMCOUT=$(( $VMCOUT + 1 ))
+done
+
+if echo "$VMSIZE" | grep -qE '^[[:digit:]]+\.?[[:digit:]]*[GgMmKk]?$' ; then
+    VMCOUT=$(( $VMCOUT - 1 ))
+else
+    VMSIZE=
+fi
+
+
+# If no size is provided, the memory size for each VM is the total free memory
+# divided by the count of given VM
+if [ "x$VMSIZE" == "x" ] ; then
+    VMSIZE=`xl info | grep free_memory | awk '{print $3}'`
+    VMSIZE=$(( $VMSIZE / $VMCOUT ))
+    VMSIZE=${VMSIZE}M
+fi
+
+# Now resolve the prefixes to put the size in bytes
+
+VMSIZE=`perl -wl -e '$_=shift; /(.*)[Gg]$/ \
+        and print $1*1000000000 or print' $VMSIZE`    # Resolve Giga prefix
+VMSIZE=`perl -wl -e '$_=shift; /(.*)[Mm]$/ \
+        and print $1*1000000 or print' $VMSIZE`       # Resolve Mega prefix
+VMSIZE=`perl -wl -e '$_=shift; /(.*)[Kk]$/ \
+        and print $1*1000 or print' $VMSIZE`          # Resolve Kilo prefix
+
+# Xen take the memory as a count of Megabytes, so divide once again
+# If there is less than 1 Mb, exit with an error
+
+VMSIZE=$(( $VMSIZE / 1000000 ))
+if [ $VMSIZE -eq 0 ] ; then
+    echo "$0: size is less than 1 Mb"
+    exit 1
+fi
+
+
+# Now affect the size for each VM
+# If a VM cannot be foun, report the error and go to next candidate
+
+error () {
+    MSG=$1; shift
+    echo "$0: $MSG" >&2
+    continue
+}
+
+for VMDIR in "$@" ; do
+    [ $VMCOUT -eq 0 ] && break
+    VMCOUT=$(( $VMCOUT - 1 ))
+
+    VMCONF="$VMDIR/xen-config.conf"
+    
+    [ -d "$VMDIR" ] || error "cannot find '$VMDIR'"
+    [ -e "$VMCONF" ] || error "cannot find '$VMCONF'"
+
+    sed -ri "s/\s*memory\s*=\s*([[:digit:]]+)/memory = $VMSIZE/" "$VMCONF" \
+	|| error "cannot replace the memory size in '$VMCONF'"
+done
