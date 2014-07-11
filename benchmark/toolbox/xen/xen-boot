@@ -34,7 +34,7 @@ done
 
 # Die if more requested than available
 
-[ $globalreq -ge $globalfree ] \
+[ $globalreq -gt $globalfree ] \
     && die "cannot allocate ${globalreq}M of memory, ${globalfree}M available"
 
 

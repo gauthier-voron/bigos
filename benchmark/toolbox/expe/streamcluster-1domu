@@ -27,7 +27,8 @@ fi
 
 xen-clone "$VMBASE" "$VMNAME" || exit 1
 xen-set-home "$VMNAME" "$RESULTS" || exit 1
-xen-boot "$VMNAME"
+xen-set-memory "$VMNAME" || exit 1
+xen-boot "$VMNAME" || exit 1
 xen-login "$VMNAME"
 
 (
