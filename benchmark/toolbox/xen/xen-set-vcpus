@@ -1,0 +1,65 @@
+#!/bin/sh
+
+# Argument parsing
+# The syntax of the command is:
+#   xen-set-vcpus VIRTMAC... [CPUS]
+# So if the last argument is a valid cpu count (<digits>), the VIRTMAC are
+# all but the last argument, else their are all and the cpu count is set to
+# default
+
+VMCOUT=0
+VMCCPU=
+
+for VMDIR in "$@" ; do
+    VMCCPU="$VMDIR"
+    VMCOUT=$(( $VMCOUT + 1 ))
+done
+
+if echo "$VMCCPU" | grep -qE '^[[:digit:]]+$' ; then
+    VMCOUT=$(( $VMCOUT - 1 ))
+else
+    VMCCPU=
+fi
+
+
+# Now affect the cpu count for each VM
+# If a VM cannot be found, report the error and go to next candidate
+
+error () {
+    MSG=$1; shift
+    echo "$0: $MSG" >&2
+    continue
+}
+
+for VMDIR in "$@" ; do
+    [ $VMCOUT -eq 0 ] && break
+    VMCOUT=$(( $VMCOUT - 1 ))
+
+    VMCONF="$VMDIR/xen-config.conf"
+    
+    [ -d "$VMDIR" ] || error "cannot find '$VMDIR'"
+    [ -e "$VMCONF" ] || error "cannot find '$VMCONF'"
+
+    if [ "x$VMCCPU" == "x" ] ; then
+	sed -ri '/^\s*vcpus\s*=\s*[[:digit:]]+\s*$/d' "$VMCONF" \
+	    || error "cannot remove the vcpu count in '$VMCCPU'"
+    else
+	if grep -Eq '^\s*vcpus\s*=\s*[[:digit:]]+\s*$' "$VMCONF" ; then
+	    sed -ri "s/\s*vcpus\s*=\s*[[:digit:]]+/vcpus = $VMCCPU/" "$VMCONF"\
+	       || error "cannot replace the vcpu count in '$VMCONF'"
+	else
+	    echo "vcpus = $VMCCPU" >> "$VMCONF" \
+		|| error "cannot set the vcpu count in '$VMCONF'"
+	fi
+    fi
+done
+
+
+die() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+[ "x$VMCONF" == "x" ] && die "no destination specified"
+exit 0
