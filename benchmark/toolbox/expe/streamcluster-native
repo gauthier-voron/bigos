@@ -1,0 +1,34 @@
+#!/bin/sh
+# Run streamcluster on a native Linux with all machine resources.
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+RESULTS=`date +'%Y-%m-%d-%H-%M-%S'`
+
+mkdir "$RESULTS" || error "cannot mkdir '$RESULTS'"
+mkdir "$RESULTS/log" || error "cannot mkdir '$RESULTS/logs'"
+build-streamcluster "$RESULTS/parsec" || exit 1
+
+cd "$RESULTS"
+cpurate log/cpu streamcluster &
+memrate log/mem streamcluster &
+numamem log/numa &
+oproperf log/oprof &
+streamcluster parsec
+kill `cat log/cpu.pid`
+kill `cat log/mem.pid`
+kill `cat log/numa.pid`
+kill `cat log/oprof.pid`
+rm log/cpu.pid
+rm log/mem.pid
+rm log/numa.pid
+rm log/oprof.pid
+mv `find parsec/log/ -name "*.log"` log
+
+mv log/* .
+rm -rf parsec
+rmdir log
