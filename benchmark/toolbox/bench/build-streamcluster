@@ -22,6 +22,7 @@ cd "$DEST"
 [ -e env.sh ] || rmdir "$PARS"
 
 source ./env.sh || error "cannot find 'env.sh'"
-parsecmgmt -a build -p streamcluster || error "cannot build"
+parsecmgmt -a build -p streamcluster \
+    >/dev/null || error "cannot build the streamcluster package"
 rm -rf ext pkgs/apps pkgs/netapps pkgs/tools pkgs/libs log
 cd "$prev"
