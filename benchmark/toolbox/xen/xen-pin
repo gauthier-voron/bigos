@@ -1,0 +1,89 @@
+#!/bin/sh
+
+# Argument parsing
+# The syntax of the command is:
+#   xen-pin VIRTMAC... [CPUS...]
+# So all the last arguments which are cpu numbers (<digits>) are considered as
+# the CPUS... argument
+# The other ones are considered as the VM names
+# If no CPU argument is provided, the given VM are unpinned
+
+VMCOUT=0
+CPCOUT=0
+CPPINN=
+
+for ARG in "$@" ; do
+    if echo "$ARG" | grep -qE '^[[:digit:]]+$' ; then
+	CPCOUT=$(( $CPCOUT + 1 ))
+    else
+	VMCOUT=$(( $VMCOUT + 1 + $CPCOUT ))
+	CPCOUT=0
+    fi
+done
+
+# If at least one CPU is specified, then build the CPPINN: the cpu pinning
+# directive in xen format
+
+if [ $CPCOUT -ge 1 ] ; then
+    CPPINN='['
+
+    VMNUM=$(( $VMCOUT + 1 ))
+    for ARG in "$@" ; do
+	VMNUM=$(( $VMNUM - 1 ))
+	[ $VMNUM -gt 0 ] && continue
+
+	[ $VMNUM -ne 0 ] && CPPINN="$CPPINN, "
+	CPPINN="$CPPINN\"$ARG\""
+    done
+
+    CPPINN="$CPPINN]"
+fi
+
+
+# Now we can set our pinning (or unset it if unpinning) argument to all of the
+# specified VM
+# If one of them cannot be found, report the error and go to the next one
+
+error () {
+    MSG=$1; shift
+    echo "$0: $MSG" >&2
+    continue
+}
+
+for VMDIR in "$@" ; do
+    [ $VMCOUT -eq 0 ] && break
+    VMCOUT=$(( $VMCOUT - 1 ))
+
+    VMCONF="$VMDIR/xen-config.conf"
+    
+    [ -d "$VMDIR" ] || error "cannot find '$VMDIR'"
+    [ -e "$VMCONF" ] || error "cannot find '$VMCONF'"
+
+    if [ "x$CPPINN" == "x" ] ; then
+	sed -ri '/^\s*cpus\s*=/d' "$VMCONF" \
+	    || error "cannot remove the cpu pinning in '$VMCONF'"
+    else
+	# Pinning the vcpus to physical cpus
+	# The pinning will make the VM crash at boot if no vcpus directive
+	# specified, but the responsibility is left to the user
+
+	if grep -Eq '^\s*cpus\s*=\s*' "$VMCONF" ; then
+	    sed -ri "s/^\s*cpus\s*=.*\$/cpus = $CPPINN/" "$VMCONF"\
+	       || error "cannot replace the cpu pinning in '$VMCONF'"
+	else
+	    echo "cpus = $CPPINN" >> "$VMCONF" \
+		|| error "cannot set the cpu pinning in '$VMCONF'"
+	fi
+    fi
+
+done
+
+
+die() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+[ "x$VMCONF" == "x" ] && die "no destination specified"
+exit 0
