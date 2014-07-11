@@ -27,14 +27,18 @@ xen-set-home "$VMNAME" "$RESULTS" || exit 1
 xen-boot "$VMNAME"
 xen-login "$VMNAME"
 
-xen-command "$VMNAME" 'cd /home'
-xen-command "$VMNAME" 'PATH=$PATH:$PWD/tools'
-xen-command "$VMNAME" 'cpurate cpu streamcluster &'
-xen-command "$VMNAME" 'memrate mem streamcluster &'
-xen-command "$VMNAME" 'streamcluster parsec'
-xen-command "$VMNAME" 'kill `cat cpu.pid`'
-xen-command "$VMNAME" 'kill `cat mem.pid`'
-xen-command "$VMNAME" 'sync'
+(
+    echo 'cd /home'
+    echo 'PATH=$PATH:$PWD/tools'
+    echo 'cpurate cpu streamcluster &'
+    echo 'memrate mem streamcluster &'
+    echo 'streamcluster parsec'
+    echo 'kill `cat cpu.pid`'
+    echo 'kill `cat mem.pid`'
+    echo 'rm cpu.pid'
+    echo 'rm mem.pid'
+    echo 'sync'
+) | xen-command "$VMNAME"
 
 xen-shutdown "$VMNAME"
 

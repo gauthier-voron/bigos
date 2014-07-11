@@ -23,5 +23,5 @@ cd "$DEST"
 
 source ./env.sh || error "cannot find 'env.sh'"
 parsecmgmt -a build -p streamcluster || error "cannot build"
-rm -rf ext pkgs/apps pkgs/netapps pkgs/tools pkgs/libs
+rm -rf ext pkgs/apps pkgs/netapps pkgs/tools pkgs/libs log
 cd "$prev"

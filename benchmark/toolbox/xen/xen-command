@@ -28,8 +28,15 @@ xl list | grep -Eq "^$VMNAME\s+" \
     || die "virtual machine '$VMNAME' is not up"
 
 # Send the command and the opposite compute-echo instruction
+# If no command is specified, then send what is received on the standard input
 (
-    echo "$COMMAND"
+    if [ "x$COMMAND" == "x" ] ; then
+	while read line ; do
+	    echo $line
+	done
+    else
+	echo "$COMMAND"
+    fi
     echo "echo $SNMAGIC | tr '0123456789abcdef' '1032547698bacdfe'"
 ) | xl console "$VMNAME" >/dev/null \
     || die "virtual machine '$VMNAME' console not available"
