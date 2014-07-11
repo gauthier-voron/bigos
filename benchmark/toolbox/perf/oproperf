@@ -36,8 +36,6 @@ $SIG{QUIT} = sub { kill 'INT', $pid };
 $SIG{TERM} = sub { kill 'INT', $pid };
 waitpid $pid, 0;
 
-unlink "$NAME.pid";
-
 open $log, '>', "$NAME.log";
 my ($binary, $count, $val);
 foreach (split "\n", `opreport --xml`) {
