@@ -1,0 +1,42 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+BINADDR="http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-core.tar.gz"
+SIMADDR="http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-sim.tar.gz"
+NATADDR="http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-native.tar.gz"
+BINTARZ="parsec.tar.gz"
+SIMTARZ="parsec.sim.tar.gz"
+NATTARZ="parsec.native.tar.gz"
+PARS="parsec-3.0"
+DEST=$1 ; shift
+[ "x$DEST" == "x" ] && DEST='parsec'
+
+prev="$PWD"
+mkdir "$DEST" || error "cannot create '$DEST'"
+cd "$DEST"
+
+[ -e "/tmp/$BINTARZ" ] || curl "$BINADDR" >"/tmp/$BINTARZ" \
+    || error "cannot download '$BINADDR'"
+[ -e "/tmp/$SIMTARZ" ] || curl "$SIMADDR" >"/tmp/$SIMTARZ" \
+    || error "cannot download '$SIMADDR'"
+[ -e "/tmp/$NATTARZ" ] || curl "$NATADDR" >"/tmp/$NATTARZ" \
+    || error "cannot download '$NATADDR'"
+
+tar -xzf "/tmp/$BINTARZ" || error "cannot extract '$BINTARZ'"
+tar -xzf "/tmp/$SIMTARZ" || error "cannot extract '$SIMTARZ'"
+tar -xzf "/tmp/$NATTARZ" || error "cannot extract '$NATTARZ'"
+mv "$PARS/"* "$PARS"/.* . 2>/dev/null
+rmdir "$PARS"
+
+source ./env.sh || error "cannot find 'env.sh'"
+parsecmgmt -a build -p fluidanimate \
+    >/dev/null || error "cannot build the fluidanimate package"
+rm -rf ext pkgs/kernels pkgs/netapps pkgs/tools pkgs/libs log toolkit
+find . -name "*.log" -exec rm {} \;
+rm `find . -name "*.tar" | grep -v fluidanimate`
+cd "$prev"

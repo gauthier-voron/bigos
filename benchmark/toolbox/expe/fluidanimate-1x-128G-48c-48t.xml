@@ -1,0 +1,8 @@
+<xen>
+  <monitor command="msrperf msr 3c:00 3c:01"/>
+  <domu name="xen-0" memory="128G" vcpus="48">
+    <monitor command="cpurate cpu fluidanimate"/>
+    <monitor command="memrate mem fluidanimate"/>
+    <run command="fluidanimate simlarge 48"/>
+  </domu>
+</xen>
