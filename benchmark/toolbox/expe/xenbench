@@ -137,7 +137,7 @@ mkdir "$result/log" || die $!;
 
 # Build all the benchmark suites on the $result directory
 # We expect, for all required banchmarks, it exists a build-<bench> script
-print "Building benchmarks";
+print "Building Benchmarks";
 `build-$_ $result/$_` foreach (@benchs);
 
 # Prepare to transfer all required tools into VMs
@@ -157,6 +157,7 @@ unless (-e $vmbase) {
 
 # Create and configure all the required Xen DomU VMs by cloning them from the
 # raw basic VM
+print "Building DomUs";
 system "xen-clone \"$vmbase\" $vmsstr" || exit 1;
 system "xen-set-home $vmsstr \"$result\"" || exit 1;
 foreach (@vms) {
@@ -178,12 +179,12 @@ sub stop
 }
 
 # Booting all the Xen DomU VMs and then wait to login on each of them
-print "Booting DomU";
+print "Booting DomUs";
 system "xen-boot $vmsstr" || stop;
 system "xen-login $vmsstr" || stop;
 
 # Start the dom0 monitoring commands
-print "Starting Benchmark";
+print "Starting Benchmarks";
 foreach (@xen_monitor) {
     system "$_ &" || stop;
 }
@@ -226,9 +227,10 @@ foreach (@vms) {
 waitpid($_, 0) foreach (@pids);
 system 'for p in *.pid ; do kill `cat $p` ; rm $p ; done';
 
-print "Stopping DomU";
+print "Stopping DomUs";
 system "xen-shutdown $vmsstr" || exit 1;
 
+print "Collecting Data";
 system "rm -rf $result" || exit 1;
 mkdir "$result" || die $!;
 foreach (@vms) {
