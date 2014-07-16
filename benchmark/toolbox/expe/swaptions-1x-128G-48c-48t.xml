@@ -1,0 +1,8 @@
+<xen>
+  <monitor command="msrperf msr 3c:00 3c:01"/>
+  <domu name="xen-0" memory="128G" vcpus="48">
+    <monitor command="cpurate cpu swaptions"/>
+    <monitor command="memrate mem swaptions"/>
+    <run command="swaptions simlarge 48"/>
+  </domu>
+</xen>

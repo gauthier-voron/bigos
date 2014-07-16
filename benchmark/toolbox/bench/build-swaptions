@@ -1,0 +1,29 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+ADDR="http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-core.tar.gz"
+TARZ="parsec.tar.gz"
+PARS="parsec-3.0"
+DEST=$1 ; shift
+[ "x$DEST" == "x" ] && DEST='parsec'
+
+prev="$PWD"
+mkdir "$DEST" || error "cannot create '$DEST'"
+cd "$DEST"
+[ -e "/tmp/$TARZ" ] || curl "$ADDR" >"/tmp/$TARZ" \
+    || error "cannot download '$ADDR'"
+[ -e env.sh ] || tar -xzf "/tmp/$TARZ" || error "cannot extract '$TARZ'"
+[ -e env.sh ] || mv "$PARS/"* "$PARS"/.* . 2>/dev/null
+[ -e env.sh ] || rmdir "$PARS"
+
+source ./env.sh || error "cannot find 'env.sh'"
+parsecmgmt -a build -p swaptions \
+    >/dev/null || error "cannot build the swaptions package"
+rm -rf ext pkgs/kernels pkgs/netapps pkgs/tools pkgs/libs log toolkit
+find . -name "*.log" -exec rm {} \;
+cd "$prev"

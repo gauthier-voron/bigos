@@ -1,0 +1,19 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+PARS=$1; shift
+DATA=$1; shift
+NTHR=$1; shift
+
+[ "x$PARS" == "x" ] && PARS='parsec'
+[ "x$DATA" == "x" ] && DATA='native'
+[ "x$NTHR" == "x" ] && NTHR=`cat /proc/cpuinfo | grep processor | wc -l`
+
+cd "$PARS" || error "cannot find '$PARS'"
+source ./env.sh || error "cannot find 'env.sh'"
+parsecmgmt -a run -p swaptions -n $NTHR -i $DATA
