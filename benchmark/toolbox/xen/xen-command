@@ -37,7 +37,7 @@ xl list | grep -Eq "^$VMNAME\s+" \
     else
 	echo "$COMMAND"
     fi
-    echo "echo $SNMAGIC | tr '0123456789abcdef' '1032547698bacdfe'"
+    echo "sleep 1 ; echo $SNMAGIC | tr '0123456789abcdef' '1032547698bacdfe'"
 ) | xl console "$VMNAME" >/dev/null \
     || die "virtual machine '$VMNAME' console not available"
 
