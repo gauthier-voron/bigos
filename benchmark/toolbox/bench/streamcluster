@@ -7,9 +7,13 @@ error() {
 }
 
 PARS=$1; shift
+DATA=$1; shift
+NTHR=$1; shift
+
 [ "x$PARS" == "x" ] && PARS='parsec'
-CPUS=2
+[ "x$DATA" == "x" ] && DATA='native'
+[ "x$NTHR" == "x" ] && NTHR=`cat /proc/cpuinfo | grep processor | wc -l`
 
 cd "$PARS" || error "cannot find '$PARS'"
 source ./env.sh || error "cannot find 'env.sh'"
-parsecmgmt -a run -p streamcluster -n $CPUS -i simlarge
+parsecmgmt -a run -p streamcluster -n $NTHR -i $DATA
