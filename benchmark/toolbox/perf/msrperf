@@ -21,4 +21,4 @@ open STDERR, '>', "/dev/null" || exit 1;    # Hide stderr informations
 $| = 1;                                     # Enable autoflush for STDOUT
 $SIG{QUIT} = sub { kill 'INT', $$ };
 $SIG{TERM} = sub { kill 'INT', $$ };
-system @EVTS;
+exec @EVTS;
