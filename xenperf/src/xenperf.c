@@ -218,7 +218,7 @@ static int assign_cores(unsigned long *cpumasks, size_t size,
 	for (i=0; i<coreinfo->node_count; i++)
 		for (j=0; j<core_count; j++)
 			if (coremap[j] == i) {
-				scopenode_mask |= (1 << j);
+				scopenode_mask |= (1L << j);
 				break;
 			}
 
