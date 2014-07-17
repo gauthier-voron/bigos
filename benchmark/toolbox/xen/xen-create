@@ -8,8 +8,11 @@ VMMNT="$VMDIR/mnt"
 VMCONF="$VMDIR/xen-config.conf"
 
 SIZEK=`df | grep ' /$' | awk '{print $3 }'`
-SIZEG=`echo $(( $SIZEK / 1000000 ))`
+echo $SIZEK
+SIZEG=`echo $(( $SIZEK / 1000000 + 1 ))`
+echo $SIZEG
 [ $SIZEG == '0' ] && SIZEG=1
+echo $SIZEG
 
 MEM=$1 ; shift
 [ "x$MEM" == "x" ] && MEM=2G
@@ -17,6 +20,11 @@ MEM=`perl -wl -e '$_=shift; /(.*)[Gg]$/ and print $1*1000000000 or print' $MEM`
 MEM=`perl -wl -e '$_=shift; /(.*)[Mm]$/ and print $1*1000000 or print' $MEM`
 MEM=`perl -wl -e '$_=shift; /(.*)[Kk]$/ and print $1*1000 or print' $MEM`
 MEM=`echo $MEM | sed -r 's/(.*)......$/\1/'`
+
+EXCLUDE=
+for excl in "$@" ; do
+    EXCLUDE="$EXCLUDE --exclude=$excl"
+done
 
 die() {
     MSG=$1; shift
@@ -50,18 +58,19 @@ done
 
 # Create and format the root partition
 truncate -s ${SIZEG}G "$VMROOT"
-mkfs.ext4 "$VMROOT"
+yes | mkfs.ext4 "$VMROOT"
 mount -o loop "$VMROOT" "$VMMNT" || die "cannot mount root partition"
 
 # Synchronize with the host root partition
 rsync -aAHXzv --delete-delay                              \
   --exclude={/mnt/*,/home/*,/dev/*,/media/*}              \
   --exclude={/proc/*,/run/*,/tmp/*,/sys/*,/var/cache/*}   \
+  $EXCLUDE                                                \
   / "$VMMNT/" || die "cannot synchronize root partition"
 
 # Create an empty home partition
 truncate -s 1M "$VMHOME" || die "cannot create home partition"
-mkfs.ext4 "$VMHOME"
+yes | mkfs.ext4 "$VMHOME"
 
 # Modify the fstab to correspond to a Xen system
 (
