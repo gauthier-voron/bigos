@@ -88,6 +88,18 @@ echo "$VMDIR" > "$VMMNT/etc/hostname"
 # Remove passwords for all users
 sed -ri 's/^([^:]+):\$[^:]+:(.*)$/\1::\2/' "$VMMNT/etc/shadow"
 
+# Try to find the login configuration and set the console to hvc0
+# (usefull under Ubuntu)
+[ -e "$VMMNT/etc/init/tty1.conf" ] \
+    && sed -r 's/tty1/hvc0/g' "$VMMNT/etc/init/tty1.conf" \
+    > "$VMMNT/etc/init/hvc0.conf"
+
+# Try to find the rc-sysinit and remove network configuration waiting
+# (usefull under Ubuntu)
+[ -e "$VMMNT/etc/init/rc-sysinit.conf" ] \
+    && sed -ri 's/filesystem and static-network-up/filesystem/' \
+    "$VMMNT/etc/init/rc-sysinit.conf"
+
 # Umount the root to be ready
 umount "$VMMNT"
 
