@@ -7,19 +7,18 @@ VMRAM="$VMDIR/initramfs.img"
 VMMNT="$VMDIR/mnt"
 VMCONF="$VMDIR/xen-config.conf"
 
-SIZEK=`df | grep ' /$' | awk '{print $3 }'`
-echo $SIZEK
-SIZEG=`echo $(( $SIZEK / 1000000 + 1 ))`
-echo $SIZEG
-[ $SIZEG == '0' ] && SIZEG=1
-echo $SIZEG
-
-MEM=$1 ; shift
-[ "x$MEM" == "x" ] && MEM=2G
-MEM=`perl -wl -e '$_=shift; /(.*)[Gg]$/ and print $1*1000000000 or print' $MEM`
-MEM=`perl -wl -e '$_=shift; /(.*)[Mm]$/ and print $1*1000000 or print' $MEM`
-MEM=`perl -wl -e '$_=shift; /(.*)[Kk]$/ and print $1*1000 or print' $MEM`
-MEM=`echo $MEM | sed -r 's/(.*)......$/\1/'`
+SIZE=$1; shift
+if [ "x$SIZE" == "x" ] ; then
+    SIZE=`df | grep ' /$' | awk '{print $3 }'`
+    SIZE=$(( $SIZE + 1000000 ))
+    SIZE=${SIZE}K
+fi
+SIZE=`perl -wl -e '$_=shift; /(.*)[Gg]$/ \
+        and print $1*1000000000 or print' $SIZE`    # Resolve Giga prefix
+SIZE=`perl -wl -e '$_=shift; /(.*)[Mm]$/ \
+        and print $1*1000000 or print' $SIZE`       # Resolve Mega prefix
+SIZE=`perl -wl -e '$_=shift; /(.*)[Kk]$/ \
+        and print $1*1000 or print' $SIZE`          # Resolve Kilo prefix
 
 EXCLUDE=
 for excl in "$@" ; do
@@ -57,7 +56,7 @@ done
 [ "x$KERNEL" == "x" ] && die "cannot find kernel"
 
 # Create and format the root partition
-truncate -s ${SIZEG}G "$VMROOT"
+truncate -s $SIZE "$VMROOT"
 yes | mkfs.ext4 "$VMROOT"
 mount -o loop "$VMROOT" "$VMMNT" || die "cannot mount root partition"
 
@@ -100,7 +99,7 @@ ramfs-add-modules "$RAMFS" "$VMRAM" `find "$dir" -type f -name "*xen*"`
 (
     echo "kernel = \"$KERNEL\""
     echo "ramdisk = \"`realpath $VMRAM`\""
-    echo "memory = $MEM"
+    echo "memory = 2000"
     echo "name = \"$VMDIR\""
     echo "disk = [\"`realpath $VMROOT`,raw,xvda1,r\""
     echo "       ,\"`realpath $VMHOME`,raw,xvda2,rw\"]"
