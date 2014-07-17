@@ -86,7 +86,7 @@ yes | mkfs.ext4 "$VMHOME"
 echo "$VMDIR" > "$VMMNT/etc/hostname"
 
 # Remove passwords for all users
-sed -ri 's/^([^:]+):\$[^:]+:(.*)$/\1::\2/' "$VMMNT/etc/shadow"
+sed -ri 's/^([^:]+):[^:]+:(.*)$/\1::\2/' "$VMMNT/etc/shadow"
 
 # Try to find the login configuration and set the console to hvc0
 # (usefull under Ubuntu)
