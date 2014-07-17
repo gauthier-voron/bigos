@@ -8,7 +8,7 @@ VMMNT="$VMDIR/mnt"
 VMCONF="$VMDIR/xen-config.conf"
 
 SIZE=$1; shift
-if [ "x$SIZE" == "x" ] ; then
+if [ "x$SIZE" = "x" ] ; then
     SIZE=`df | grep ' /$' | awk '{print $3 }'`
     SIZE=$(( $SIZE + 1000000 ))
     SIZE=${SIZE}K
@@ -40,20 +40,20 @@ mkdir "$VMMNT"
 # Detect the current ramfs
 RAMFS=
 for f in /boot/init* ; do
-    [ "x$RAMFS" == "x" ] || break
-    [ "$f" == "/boot/initramfs-linux.img" ] && RAMFS="$f"
-    [ "$f" == "/boot/initrd.img-`uname -r`" ] && RAMFS="$f"
+    [ "x$RAMFS" = "x" ] || break
+    [ "$f" = "/boot/initramfs-linux.img" ] && RAMFS="$f"
+    [ "$f" = "/boot/initrd.img-`uname -r`" ] && RAMFS="$f"
 done
-[ "x$RAMFS" == "x" ] && die "cannot find ramfs"
+[ "x$RAMFS" = "x" ] && die "cannot find ramfs"
 
 # Detect the current kernel
 KERNEL=
 for f in /boot/vmlinuz-* ; do
-    [ "x$KERNEL" == "x" ] || break
-    [ "$f" == "/boot/vmlinuz-linux" ] && KERNEL="$f"
-    [ "$f" == "/boot/vmlinuz-`uname -r`" ] && KERNEL="$f"
+    [ "x$KERNEL" = "x" ] || break
+    [ "$f" = "/boot/vmlinuz-linux" ] && KERNEL="$f"
+    [ "$f" = "/boot/vmlinuz-`uname -r`" ] && KERNEL="$f"
 done
-[ "x$KERNEL" == "x" ] && die "cannot find kernel"
+[ "x$KERNEL" = "x" ] && die "cannot find kernel"
 
 # Create and format the root partition
 truncate -s $SIZE "$VMROOT"

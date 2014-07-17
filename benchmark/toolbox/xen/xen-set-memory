@@ -24,7 +24,7 @@ fi
 
 # If no size is provided, the memory size for each VM is the total free memory
 # divided by the count of given VM
-if [ "x$VMSIZE" == "x" ] ; then
+if [ "x$VMSIZE" = "x" ] ; then
     VMSIZE=`xl info | grep free_memory | awk '{print $3}'`
     VMSIZE=$(( $VMSIZE / $VMCOUT ))
     VMSIZE=${VMSIZE}M
@@ -78,5 +78,5 @@ die() {
     exit 1
 }
 
-[ "x$VMCONF" == "x" ] && die "no destination specified"
+[ "x$VMCONF" = "x" ] && die "no destination specified"
 exit 0

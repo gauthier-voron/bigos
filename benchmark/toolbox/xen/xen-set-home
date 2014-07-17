@@ -28,7 +28,7 @@ fi
 # If no size is provided, then compute one which is the size of the given
 # host directory + 1G
 # Compute the home size
-if [ "x$HSSIZE" == "x" ] ; then
+if [ "x$HSSIZE" = "x" ] ; then
     HSSIZE=`du -s $HSHOME | awk '{print $1}'`     # du give size in Kilobytes
     HSSIZE=$(( $HSSIZE + 1000000 ))
     HSSIZE=${HSSIZE}K
@@ -56,7 +56,7 @@ die () {
     MSG=$1; shift
     echo "$0: $MSG" >&2
     umount "$VMMNT" 2>/dev/null
-    [ "x$file" == "x" ] || rm "$file" 2>/dev/null
+    [ "x$file" = "x" ] || rm "$file" 2>/dev/null
     exit 1
 }
 
@@ -104,5 +104,5 @@ for VMDIR in "$@" ; do
     file=
 done
 
-[ "x$VMCONF" == "x" ] && die "no destination specified"
+[ "x$VMCONF" = "x" ] && die "no destination specified"
 exit 0

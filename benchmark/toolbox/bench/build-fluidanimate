@@ -14,7 +14,7 @@ SIMTARZ="parsec.sim.tar.gz"
 NATTARZ="parsec.native.tar.gz"
 PARS="parsec-3.0"
 DEST=$1 ; shift
-[ "x$DEST" == "x" ] && DEST='parsec'
+[ "x$DEST" = "x" ] && DEST='parsec'
 
 prev="$PWD"
 mkdir "$DEST" || error "cannot create '$DEST'"

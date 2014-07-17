@@ -54,5 +54,5 @@ for VMDEST in "$@" ; do
     ) >>"$VMDEST/xen-config.conf"
 done
 
-[ "x$VMDEST" == "x" ] && die "no destination specified"
+[ "x$VMDEST" = "x" ] && die "no destination specified"
 exit 0

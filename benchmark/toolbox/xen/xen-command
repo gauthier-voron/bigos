@@ -30,7 +30,7 @@ xl list | grep -Eq "^$VMNAME\s+" \
 # Send the command and the opposite compute-echo instruction
 # If no command is specified, then send what is received on the standard input
 (
-    if [ "x$COMMAND" == "x" ] ; then
+    if [ "x$COMMAND" = "x" ] ; then
 	while read line ; do
 	    echo $line
 	done

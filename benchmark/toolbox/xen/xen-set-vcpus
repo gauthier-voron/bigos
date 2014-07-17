@@ -40,7 +40,7 @@ for VMDIR in "$@" ; do
     [ -d "$VMDIR" ] || error "cannot find '$VMDIR'"
     [ -e "$VMCONF" ] || error "cannot find '$VMCONF'"
 
-    if [ "x$VMCCPU" == "x" ] ; then
+    if [ "x$VMCCPU" = "x" ] ; then
 	sed -ri '/^\s*vcpus\s*=\s*[[:digit:]]+\s*$/d' "$VMCONF" \
 	    || error "cannot remove the vcpu count in '$VMCCPU'"
     else
@@ -61,5 +61,5 @@ die() {
     exit 1
 }
 
-[ "x$VMCONF" == "x" ] && die "no destination specified"
+[ "x$VMCONF" = "x" ] && die "no destination specified"
 exit 0

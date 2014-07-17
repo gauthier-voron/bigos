@@ -55,7 +55,7 @@ for VMNAME in "$@" ; do
 done
 
 # If no argument is provided, exit with an error
-[ "x$VMNAME" == "x" ] && die "no virtual machine name given"
+[ "x$VMNAME" = "x" ] && die "no virtual machine name given"
 
 # If it were, some 'xl create' have been launched asynchronously, wait it
 wait

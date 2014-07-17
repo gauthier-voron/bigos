@@ -9,7 +9,7 @@ FILES=$@
 cp "$SOURCE" "$TARGET" || exit 1
 
 # Check if root
-[ `whoami` == 'root' ] || exit 1
+[ `whoami` = 'root' ] || exit 1
 
 # Prepare environment
 TARGET=`realpath $TARGET`
