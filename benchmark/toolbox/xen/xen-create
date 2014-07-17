@@ -19,6 +19,8 @@ MEM=`perl -wl -e '$_=shift; /(.*)[Kk]$/ and print $1*1000 or print' $MEM`
 MEM=`echo $MEM | sed -r 's/(.*)......$/\1/'`
 
 die() {
+    MSG=$1; shift
+    echo "$0: $MSG" >&2
     umount "$VMMNT" 2>/dev/null
     rm -rf "$VMDIR"
     exit 1
@@ -35,7 +37,7 @@ for f in /boot/init* ; do
     [ "$f" == "/boot/initramfs-linux.img" ] && RAMFS="$f"
     [ "$f" == "/boot/initrd.img-`uname -r`" ] && KERNEL="$f"
 done
-[ "x$RAMFS" == "x" ] && die
+[ "x$RAMFS" == "x" ] && die "cannot find ramfs"
 
 # Detect the current kernel
 KERNEL=
@@ -44,21 +46,21 @@ for f in /boot/vmlinuz-* ; do
     [ "$f" == "/boot/vmlinuz-linux" ] && KERNEL="$f"
     [ "$f" == "/boot/vmlinuz-`uname -r`" ] && KERNEL="$f"
 done
-[ "x$KERNEL" == "x" ] && die
+[ "x$KERNEL" == "x" ] && die "cannot find kernel"
 
 # Create and format the root partition
 truncate -s ${SIZEG}G "$VMROOT"
 mkfs.ext4 "$VMROOT"
-mount -o loop "$VMROOT" "$VMMNT" || die
+mount -o loop "$VMROOT" "$VMMNT" || die "cannot mount root partition"
 
 # Synchronize with the host root partition
 rsync -aAHXzv --delete-delay                              \
   --exclude={/mnt/*,/home/*,/dev/*,/media/*}              \
   --exclude={/proc/*,/run/*,/tmp/*,/sys/*,/var/cache/*}   \
-  / "$VMMNT/" || die
+  / "$VMMNT/" || die "cannot synchronize root partition"
 
 # Create an empty home partition
-truncate -s 1M "$VMHOME" || die
+truncate -s 1M "$VMHOME" || die "cannot create home partition"
 mkfs.ext4 "$VMHOME"
 
 # Modify the fstab to correspond to a Xen system
