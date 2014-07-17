@@ -7,7 +7,7 @@ VMRAM="$VMDIR/initramfs.img"
 VMMNT="$VMDIR/mnt"
 VMCONF="$VMDIR/xen-config.conf"
 
-SIZEK=`df | grep ' /$' | awk '{print $2 }'`
+SIZEK=`df | grep ' /$' | awk '{print $3 }'`
 SIZEG=`echo $(( $SIZEK / 1000000 ))`
 [ $SIZEG == '0' ] && SIZEG=1
 
