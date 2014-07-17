@@ -35,7 +35,7 @@ RAMFS=
 for f in /boot/init* ; do
     [ "x$RAMFS" == "x" ] || break
     [ "$f" == "/boot/initramfs-linux.img" ] && RAMFS="$f"
-    [ "$f" == "/boot/initrd.img-`uname -r`" ] && KERNEL="$f"
+    [ "$f" == "/boot/initrd.img-`uname -r`" ] && RAMFS="$f"
 done
 [ "x$RAMFS" == "x" ] && die "cannot find ramfs"
 
