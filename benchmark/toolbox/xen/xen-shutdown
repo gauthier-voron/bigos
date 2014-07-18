@@ -12,11 +12,17 @@ error() {
     continue
 }
 
+VMIDS=
+
 for VMNAME in "$@" ; do
 
     # Check the virtual machine is running
     xl list | grep -Eq "^$VMNAME\s+" \
 	|| error "virtual machine '$VMNAME' is not up"
+
+    # Save the virtual machine ID (since its name is lost while xen collecting
+    # its memory back, whereas its ID is not)
+    VMIDS="$VMIDS `xl domid "$VMNAME"`"
 
     # Shutdown the virtual machine with xl
     xl shutdown "$VMNAME" \
@@ -28,9 +34,9 @@ done
 [ "x$VMNAME" = "x" ] && die "no virtual machine name given"
 
 # If it were, some foreach of them, wait it is really shut down
-for VMNAME in "$@" ; do
+for ID in $VMIDS ; do
     while true ; do
-	xl list | grep -Eq "^$VMNAME\s+" || break
+	xl list | grep -Eq "^[^[:digit:]]+\s+$ID" || break
 	sleep 1
     done
 done
