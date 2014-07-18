@@ -1,0 +1,31 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+ADDR="http://www.mnesic.fr/NPB3.3.1.tar.gz"
+TARZ="NPB3.3.1.tar.gz"
+PARS="NPB3.3.1"
+DEST=$1 ; shift
+[ "x$DEST" = "x" ] && DEST='npb'
+
+prev="$PWD"
+mkdir "$DEST" || error "cannot create '$DEST'"
+cd "$DEST"
+[ -e "/tmp/$TARZ" ] || curl "$ADDR" >"/tmp/$TARZ" \
+    || error "cannot download '$ADDR'"
+[ -e env.sh ] || tar -xzf "/tmp/$TARZ" || error "cannot extract '$TARZ'"
+[ -e env.sh ] || mv "$PARS/"* "$PARS"/.* . 2>/dev/null
+[ -e env.sh ] || rmdir "$PARS"
+
+rm Changes.log
+cd NPB3.3-OMP
+sed -r -e 's/CFLAGS\s*=/CFLAGS = -fopenmp/' -e 's/CLINKFLAGS\s*=/CLINKFLAGS = -lgomp/' config/make.def.template > config/make.def
+make dc CLASS=S
+make dc CLASS=W
+make dc CLASS=A
+make dc CLASS=B
+cd "$prev"
