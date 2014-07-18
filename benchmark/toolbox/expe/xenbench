@@ -62,6 +62,7 @@ sub outer
 # Read an XML configuration file and parse the XML to give the data to the
 # extracting part above
 
+my $filename = $ARGV[0] || '';
 my ($raw, $data);
 {
     local undef $/;
@@ -131,6 +132,12 @@ my $result = date;
 
 %uniq = ();
 @monits = grep { ! $uniq{$_}++ } @monits;
+
+if ($filename) {
+    $filename =~ s|^.*/(.*)$|$1|;
+    $filename =~ s|^(.*)\.(.*)|$1|;
+    $result = $filename . '.' . $result;
+}
 
 mkdir "$result" || die $!;
 mkdir "$result/log" || die $!;
