@@ -39,7 +39,7 @@ for VMDEST in "$@" ; do
     # Create a new empty home
     truncate -s 1M "$VMDEST/xvda2.ext4" \
 	2>/dev/null || error "cannot create home"
-    mkfs.ext4 "$VMDEST/xvda2.ext4" >/dev/null 2>/dev/null
+    yes | mkfs.ext4 "$VMDEST/xvda2.ext4" >/dev/null 2>/dev/null
 
     # Update the paths in xen-config.conf
     sed -ri '/^\s*ramdisk/d' "$VMDEST/xen-config.conf"

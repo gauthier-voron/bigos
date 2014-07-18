@@ -85,7 +85,7 @@ for VMDIR in "$@" ; do
     file=`mktemp $VMHOME.XXXXXXX`
     truncate -s $HSSIZE "$file" \
 	2>/dev/null || error "cannot allocate $HSSIZE for '$file'"
-    mkfs.ext4 -F "$file" \
+    yes | mkfs.ext4 -F "$file" \
 	>/dev/null 2>/dev/null || error "cannot make ext4 fs in '$file'"
 
     # Mount the new file system
