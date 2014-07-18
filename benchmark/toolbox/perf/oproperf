@@ -40,25 +40,32 @@ open $log, '>', "$NAME.log";
 my ($binary, $count, $val);
 foreach (split "\n", `opreport --xml`) {
     if (/^<binary\s+name="(.*)">$/) {
-	$binary = $1;
-    } elsif ($binary && /^<count>$/) {
-	$count = 1;
+        $binary = $1;
+    } elsif ($binary && /^<count.*>$/) {
+        $count = 1;
     } elsif ($count && /^(\d+)<\/count>$/) {
-	$val = $1;
-	$values{$binary} = $val;
+        $val = $1;
+        push @{$values{$binary}}, $val;
     } else {
-	undef $binary;
-	undef $count;
-	undef $val;
+        $binary = '';
+        $count = '';
+        $val = '';
     }
 }
 foreach (keys %values) {
-    printf $log $_ . ' ';
+    my $i = 0;
+    my $bin = $_;
+    foreach (@{$values{$bin}}) {
+        printf $log $bin . "($i) ";
+        $i++;
+    }
 }
 print $log '';
 
 foreach (keys %values) {
-    printf $log $values{$_} . ' ';
+    foreach (@{$values{$_}}) {
+        printf $log $_ . ' ';
+    }
 }
 print $log '';
 
