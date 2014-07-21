@@ -1617,9 +1617,10 @@ csched_load_balance(struct csched_private *prv, int cpu,
     __runq_remove(snext);
     return snext;
 }
+
+
 /* Test fonction to print current runq state of the differents p_cpus
 */
-
 /*static int 
 csched_print_runqs(
 	int *pcpu_list)
@@ -1648,17 +1649,59 @@ csched_print_runqs(
 
 
 
-unsigned int current_reg_addr=0;
+unsigned int current_reg_addr = 0;
+unsigned int nr_cpus          = 0;
+unsigned int measuring        = 0;
+unsigned int initialized      = 0;
+unsigned int max_domains      = 16;
 
-/* data table, on x : cpus, on y : domains, for example here : 4cpus, 16 domains */
-unsigned long bigos_regs_table[4][16];
+/* data table, on x : cpus, on y : domains, for more simple approach, we define a static maximum number of domains = 16 */
+unsigned long **bigos_regs_table;
+
+int
+__bigos_init_demux(
+	void)
+{
+	int i;
+	printk("__bigos_read_demux() called\n");
+	nr_cpus = num_online_cpus();
+	bigos_regs_table = xmalloc_array(unsigned long*,16);
+	for (i = 0 ; i < 16 ; i++){
+		bigos_regs_table[i] = xmalloc_array(unsigned long,nr_cpus);
+		if (bigos_regs_table[i] == NULL)
+			return 1;
+	}
+	initialized = 0;
+	return 0;
+}
+
 
 int
 bigos_init_demux(
 	unsigned long reg_addr)
 {
+	if (!initialized)
+		__bigos_init_demux();
 	current_reg_addr=(unsigned int)reg_addr;
+	measuring = 1;
 	return 0;
+}
+
+int
+bigos_stop_demux(
+	unsigned long reg_addr)
+{
+	measuring = 0;
+	/* TODO : see for desalloc of the table(s) */
+	return 0;
+}
+
+unsigned long
+bigos_read_demux(
+	unsigned long msr_addr, unsigned long domain)
+{
+	unsigned int cpu = smp_processor_id();
+	return bigos_regs_table[cpu][domain];
 }
 
 
@@ -1671,35 +1714,31 @@ update_dom(
 		/* We need to call the fonction to save the perf counters context 
 		   && save data in a table 
 		*/
+		if(measuring){
+			/* declare variables */
+			unsigned int reg_eax, reg_edx, reg_ecx;
+			reg_ecx = current_reg_addr;
 
-		/* declare variables */
-		unsigned int reg_eax, reg_edx, reg_ecx;
-		reg_ecx = current_reg_addr;
+			/* call rdmsr */
+	    		asm volatile ("rdmsr"
+                			: "=a" (reg_eax), "=d" (reg_edx)
+                			: "c"  (reg_ecx));
 
-		/* call rdmsr */
-	    	asm volatile ("rdmsr"
-                		: "=a" (reg_eax), "=d" (reg_edx)
-                		: "c"  (reg_ecx));
-
-		/* save into table */
-/*		bigos_regs_table[cpu][last_dom].eax += regs->eax;	
-		bigos_regs_table[cpu][last_dom].edx += regs->edx;	
+			/* save into table */
+			/* result = concatenation(edx, eax) */
+			/* bigos_regs_table[cpu][cur_pcpu->last_dom] = (((unsigned long) reg_edx)<<32) | (reg_eax);
 */
-
-		/* result = concatenation(edx, eax) */
-		bigos_regs_table[cpu][cur_pcpu->last_dom] = (((unsigned long) reg_edx)<<32) | (reg_eax);
-
-		/* reset counter value for further mesures */
-		reg_eax = 0;
-		reg_edx = 0;
-		asm volatile ("wrmsr"
-                  		:
-                  		: "a" (reg_eax), "c" (reg_ecx), "d" (reg_edx));
+			/* reset counter value for further mesures */
+			reg_eax = 0;
+			reg_edx = 0;
+			asm volatile ("wrmsr"
+                	  		:
+                	  		: "a" (reg_eax), "c" (reg_ecx), "d" (reg_edx));
+		}
 	}
 	cur_pcpu->last_dom = next_vcpu_dom;
 	return 0;
 }
-
 
 
 /*

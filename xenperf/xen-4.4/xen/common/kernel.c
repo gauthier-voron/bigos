@@ -221,10 +221,10 @@ void __init do_initcalls(void)
 
 extern void bigos_init_demux(unsigned long msr_addr);
 
-/* extern void bigos_stop_demux(unsigned long msr_addr); */
+extern void bigos_stop_demux(unsigned long msr_addr);
 
-/* extern unsigned long bigos_read_demux(unsigned long msr_addr, */
-/*                                       unsigned long domain); */
+extern unsigned long bigos_read_demux(unsigned long msr_addr, 
+                                       unsigned long domain); 
 
 /* extern void bigos_write_demux(unsigned long msr_addr, */
 /*                               unsigned long domain, */
@@ -267,7 +267,7 @@ unsigned int bigos_count_domain(void)
 /*void bigos_init_demux(unsigned long msr_addr)
 {
 }
-*/
+
 void bigos_stop_demux(unsigned long msr_addr)
 {
 }
@@ -280,7 +280,7 @@ unsigned long bigos_read_demux(unsigned long msr_addr,
     bigos_do_rdmsr(&regs);
     return (((unsigned long) regs.edx) << 32) | (regs.eax & 0xffffffff);
 }
-
+*/
 void bigos_write_demux(unsigned long msr_addr,
                        unsigned long domain,
                        unsigned long value)
