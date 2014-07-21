@@ -36,7 +36,7 @@ done
 # If it were, some foreach of them, wait it is really shut down
 for ID in $VMIDS ; do
     while true ; do
-	xl list | grep -Eq "^[^[:digit:]]+\s+$ID" || break
+	xl list | awk '{print $2}' | grep -Eq "^$ID\$" || break
 	sleep 1
     done
 done
