@@ -251,13 +251,13 @@ static void display_header(const unsigned long *events,
 {
 	size_t i, j;
 
-	printf("# time      ");
+	printf("#time");
 
 	for (i=0; i<size; i++)
 		for (j=0; j<coreinfo->core_count; j++) {
 			if (!(cpumasks[i] & (1L << j)))
 				continue;
-			printf("\t0x%02lx:%02lx(%lu)", events[i],umasks[i],j);
+			printf(" 0x%02lx:%02lx(%lu)", events[i],umasks[i],j);
 		}
 	
 	printf("\n");
@@ -326,11 +326,11 @@ static int run_counters(const struct perfcnt **perfcnt,
 					fprintf(stderr, "xenperf: cannot read "
 						"counter %p on core %u\n",
 						perfcnt[i], j);
-					printf("\t          ");
+					printf(" -");
 					continue;
 				}
 
-				printf("\t%-10lu", pmc);
+				printf(" %lu", pmc);
 
 				if (pmc > (COUNTER_CEIL / 2))
 					up = 1;               /* loop faster */
