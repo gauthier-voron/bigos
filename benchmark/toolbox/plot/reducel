@@ -1,0 +1,143 @@
+#!/usr/bin/perl -wl
+use strict;
+
+
+# input: op name regex... < file
+# example: sum total .* < FILE.dat
+# file:
+#   #col0 col1 col2
+#   aab 1 2
+#   aac 3 4
+#   aka 5 6
+#   cbc 7 8
+#   ijk 9 10
+#
+# output:
+#   #col0 col1 col2
+#   total 25 30
+
+
+sub usage
+{
+    return <<"EOF";
+usage: $0 OPERATION NAME REGEX... < FILE
+
+Perform a reduction on the input data FILE, with the given OPERATION, on the
+lines matching given REGEXs, producing a new line with the given NAME.
+For instance, given the file "foo":
+
+  \$ cat foo
+  #col0 col1 col2
+  aab 1 2
+  aac 3 4
+  aka - 6
+  cbc 7 8
+  ijk 9 10
+
+To perform  sum on all the lines and producing a line named "total", you can
+do:
+
+  \$ $0 sum total '.*' < foo
+  #col0 col1 col2
+  total 20 30
+
+Note that the produced line always go to the end. Also note than incomplete
+values are ignored here with the sum operation. When it is possible,
+incomplete values will be interpreted as the neutral element.
+
+Available operations are:
+  operation      meaning      neutral element
+  avg            average      (empty)
+  sum            sum          0
+EOF
+}
+
+
+sub avg
+{
+    my $acc = 0;
+    $acc += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
+    $acc /= scalar @_ - scalar (grep { $_ eq '-' } @_);
+    return $acc;
+}
+
+sub sum
+{
+    my $acc = 0;
+    $acc += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
+    return $acc;
+}
+
+
+my ($op, $name);
+my $i;
+my $line;
+my @fields;
+my @columns;
+
+
+$op = shift;
+$name = shift;
+
+
+if (defined $op && ($op eq '-h' || $op eq '-?' || $op eq '--help')) {
+    printf usage();
+    exit 0;
+}
+
+if (!defined $op || !defined $op || scalar @ARGV <= 0) {
+    printf STDERR usage();
+    exit 1;
+}
+
+if (!defined &{\&{$op}}) {
+    printf STDERR usage();
+    exit 1;
+}
+
+
+# Print the first line without any question.
+# This is the title line, do not touch it.
+
+$line = <STDIN>;
+exit 0 unless (defined $line);
+printf $line;
+
+
+# For each line, if the first field matches a regex, print the line and goes
+# next, otherwise, for each field, push the value in the column-specific
+# buffer.
+
+while (defined ($line = <STDIN>)) {
+    @fields = split /\s+/, $line;
+    $i = shift @fields;
+
+    foreach (@ARGV) {
+	unless ($i =~ /$_/) {
+	    printf $line;
+	    undef $i;
+	}
+    }
+    next unless (defined $i);
+
+    $i = 1;
+    foreach (@fields) {
+	push @{$columns[$i]}, $_;
+	$i++;
+    }
+}
+
+
+# Shift the first (0th) column buffer.
+
+shift @columns;
+
+
+# Print the last line.
+# For each column, perform the reduction and print the result.
+
+printf $name;
+foreach (@columns) {
+    printf ' ' . (&{\&{$op}}(@{$_}));
+}
+print '';
