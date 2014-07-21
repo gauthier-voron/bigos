@@ -1,0 +1,147 @@
+#!/usr/bin/perl -wl
+use strict;
+
+
+sub usage
+{
+    return <<"EOF";
+usage: $0 OPERATION NAME REGEX... < FILE
+
+Perform a reduction on the input data FILE, with the given OPERATION, on the
+columns matching given REGEXs, producing a new column with the given NAME.
+For instance, given the file "foo":
+
+  \$ cat foo
+  #col0 col1 col2 other
+  aab 1 2 14
+  aac 3 4 2
+  aka 5 - 8
+  cbc 7 8 50
+  ijk - 10 17
+
+To perform an average on the columns which begin by "col" and producing a
+column named "COL", you can do:
+
+  \$ $0 avg COL '^col' < foo
+  #col0 other COL
+  aab 14 1.5
+  aac 2 3.5
+  aka 8 5
+  cbc 50 7.5
+  ijk 17 10
+
+Note that the produced column always go to the end. Also note than incomplete
+values are ignored here with the average operation. When it is possible,
+incomplete values will be interpreted as the neutral element.
+
+Available operations are:
+  operation      meaning      neutral element
+  avg            average      (empty)
+  sum            sum          0
+  max            maximum      (empty)
+EOF
+}
+
+
+sub avg
+{
+    my $acc = 0;
+    $acc += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
+    $acc /= scalar @_ - scalar (grep { $_ eq '-' } @_);
+    return $acc;
+}
+
+sub sum
+{
+    my $acc = 0;
+    $acc += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
+    return $acc;
+}
+
+sub max
+{
+    my $max;
+    foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_) {
+	$max = $_ if (!defined $max);
+	$max = $_ if ($max < $_);
+    }
+    return $max;
+}
+
+
+my ($op, $name);
+my $i;
+my $line;
+my $column;
+my @fields;
+my %columns;
+my @values;
+
+$op = shift;
+$name = shift;
+
+
+if (!defined $op || !defined $name || scalar @ARGV <= 0) {
+    printf STDERR usage();
+    exit 1;
+}
+
+if ($op eq '-h' || $op eq '--help' || $op eq '-?') {
+    printf usage();
+    exit 0;
+}
+
+if (!defined &{\&{$op}}) {
+    printf STDERR usage();
+    exit 1;
+}
+
+
+# First line operation
+# Find the columns matching the regexs and store the column number in @columns
+# Do not print the matching column header, instead, print the new column header
+# at the end
+
+$line = <STDIN>;
+exit 0 unless (defined $line);
+@fields = split /\s+/, $line;
+
+printf (shift @fields);
+
+$i = 1;
+foreach $column (@fields) {
+    foreach (@ARGV) {
+	if ($column =~ /$_/) {
+	    $columns{$i} = 1;
+	    last;
+	}
+    }
+    printf ' ' . $column unless (defined $columns{$i});
+    $i++;
+}
+print ' ' . $name;
+
+
+# Apply the reduction for each line
+# If a field has its column number in @column, add it to the temporary buffer
+# @values, otherwise display it.
+# When the line is processed, give the buffer to the operation and print the
+# result.
+
+while (defined ($line = <STDIN>)) {
+    @fields = split /\s+/, $line;
+    printf (shift @fields);
+    
+    $i = 0;
+    @values = ();
+    foreach (@fields) {
+	$i++;
+	if (defined $columns{$i}) {
+	    push @values, $_;
+	    next;
+	}
+	printf ' ' . $_;
+    }
+
+    print ' ' . (&{\&{$op}}(@values));
+}
