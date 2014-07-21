@@ -23,9 +23,9 @@ cd "$DEST"
 
 rm Changes.log
 cd NPB3.3-OMP
-sed -r -e 's/CFLAGS\s*=/CFLAGS = -fopenmp/' -e 's/CLINKFLAGS\s*=/CLINKFLAGS = -lgomp/' config/make.def.template > config/make.def
-make dc CLASS=S
-make dc CLASS=W
-make dc CLASS=A
-make dc CLASS=B
+sed -r -e 's/CFLAGS\s*=/CFLAGS = -fopenmp/' -e 's/C_LIB\s*=/C_LIB = -lgomp/' config/make.def.template > config/make.def
+make dc CLASS=S >/dev/null 2>/dev/null || error "cannot make dc CLASS=S"
+make dc CLASS=W >/dev/null 2>/dev/null || error "cannot make dc CLASS=S"
+make dc CLASS=A >/dev/null 2>/dev/null || error "cannot make dc CLASS=S"
+make dc CLASS=B >/dev/null 2>/dev/null || error "cannot make dc CLASS=S"
 cd "$prev"
