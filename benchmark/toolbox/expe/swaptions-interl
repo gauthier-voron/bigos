@@ -7,7 +7,7 @@ error() {
     exit 1
 }
 
-RESULTS=swaptions-native.`date +'%Y-%m-%d-%H-%M-%S'`
+RESULTS=swaptions-interl.`date +'%Y-%m-%d-%H-%M-%S'`
 
 mkdir "$RESULTS" || error "cannot mkdir '$RESULTS'"
 mkdir "$RESULTS/log" || error "cannot mkdir '$RESULTS/logs'"
@@ -18,7 +18,7 @@ cpurate log/cpu swaptions &
 memrate log/mem swaptions &
 numamem log/numa &
 oproperf log/oprof CPU_IO_REQUESTS_TO_MEMORY_IO:500:0xa8 CPU_IO_REQUESTS_TO_MEMORY_IO:500:0x98 &
-swaptions parsec
+numactl --interleave=all swaptions parsec
 kill `cat log/cpu.pid`
 kill `cat log/mem.pid`
 kill `cat log/numa.pid`

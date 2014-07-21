@@ -7,7 +7,7 @@ error() {
     exit 1
 }
 
-RESULTS=`date +'%Y-%m-%d-%H-%M-%S'`
+RESULTS=streamcluster-native.`date +'%Y-%m-%d-%H-%M-%S'`
 
 mkdir "$RESULTS" || error "cannot mkdir '$RESULTS'"
 mkdir "$RESULTS/log" || error "cannot mkdir '$RESULTS/logs'"
@@ -27,7 +27,11 @@ rm log/cpu.pid
 rm log/mem.pid
 rm log/numa.pid
 rm log/oprof.pid
-sleep 1
+
+while pgrep oproperf ; do
+    sleep 1
+done
+
 mv `find parsec/log/ -name "*.log"` log
 
 mv log/* .
