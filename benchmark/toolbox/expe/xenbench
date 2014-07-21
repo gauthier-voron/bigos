@@ -13,6 +13,7 @@ my %domu_memory;        # domu memory spec if any
 my %domu_vcpus;         # domu vcpus spec if any
 my %domu_pin;           # domu pinning spec if any
 my %domu_run;           # domu array of command
+my %domu_size;          # domu home size
 my %domu_monitor;       # domu array of monitoring command
 my @stack;              # xml stack
 my $current_domu;       # last domu name
@@ -28,6 +29,7 @@ sub inner
 	$domu_memory{$current_domu} = $props{memory};
 	$domu_vcpus{$current_domu} = $props{vcpus};
 	$domu_pin{$current_domu} = $props{pin};
+	$domu_size{$current_domu} = $props{size};
     }
 
     # When encountering a monitor node, it is either a dom0 or a domu
@@ -166,15 +168,16 @@ unless (-e $vmbase) {
 # raw basic VM
 print "Building DomUs";
 system "xen-clone \"$vmbase\" $vmsstr" || exit 1;
-system "xen-set-home $vmsstr \"$result\"" || exit 1;
 foreach (@vms) {
     my $mem = $domu_memory{$_};
     my $vcpus = $domu_vcpus{$_};
     my $pin = $domu_pin{$_};
+    my $size = $domu_size{$_} || '';
 
     (system "xen-set-memory \"$_\" $mem" || exit 1) if (defined $mem);
     (system "xen-set-vcpus \"$_\" $vcpus" || exit 1) if (defined $vcpus);
     (system "xen-pin \"$_\" $pin" || exit 1) if (defined $pin);
+    system "xen-set-home \"$_\" \"$result\" $size" || exit 1;
 }
 
 
