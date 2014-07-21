@@ -1,0 +1,86 @@
+#!/usr/bin/perl -wl
+use strict;
+
+
+sub usage
+{
+    return <<"EOF";
+usage: $0 FILE...
+
+Append the given FILEs but instead of doing so line by line, it does it column
+by column. So for instance, it you have two files "foo" and "bar" as following:
+
+  \$ cat foo
+  #col0 col1
+  0 1
+  2 3
+  \$ cat bar
+  #col0 col1 col2
+  0 7 3
+  8 4 11
+
+The running the $0 command will give the following:
+
+  \$ $0 foo bar
+  #col0 col1 col1 col2
+  0 1 7 3
+  2 3 - -
+  8 - 4 11
+
+Note that the first column is used as a "key" column and so the values of all
+the files are merged for this column, whereas for the other ones, their are
+just appended, possibily padded with '-', even if their have the same name.
+EOF
+}
+
+
+my ($line, $key, @fields);
+my %lines;
+my $colcount = 0;
+my $newcolcount = 0;
+
+
+if (scalar @ARGV == 0) {
+    printf STDERR usage();
+    exit 1;
+}
+
+if ($ARGV[0] eq '-h' || $ARGV[0] eq '-?' || $ARGV[0] eq '--help') {
+    printf usage();
+    exit 0;
+}
+
+
+foreach (@ARGV) {
+    open IN, '<', $_;
+
+    while (defined ($line = <IN>)) {
+	@fields = split /\s+/, $line;
+	$key = shift @fields;
+
+	if (!defined $lines{$key}) {
+	    push @{$lines{$key}}, '-', foreach (1..$colcount);
+	}
+
+	push @{$lines{$key}}, $_ foreach (@fields);
+
+	if (scalar @fields > 0 && scalar @{$lines{$key}} > $newcolcount) {
+	    $newcolcount = scalar @{$lines{$key}};
+	}
+    }
+
+    close IN;
+
+    $colcount = $newcolcount;
+}
+
+foreach (keys %lines) {
+    push @{$lines{$_}}, '-' while (scalar @{$lines{$_}} < $colcount);
+}
+
+
+foreach (sort keys %lines) {
+    printf $_;
+    printf " $_" foreach (@{$lines{$_}});
+    print '';
+}
