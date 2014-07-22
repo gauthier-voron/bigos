@@ -1,0 +1,74 @@
+#!/usr/bin/perl -wl
+use strict;
+
+
+sub usage
+{
+    return <<"EOF";
+usage: $0 REGEX... < FILE
+
+Filter the lines on the input data FILE, only retaining the ones which
+the first field match the given REGEXs.
+For instance, given the file "foo":
+
+  \$ cat foo
+  #col0 col1 col2
+  aab 1 2
+  aac 3 4
+  aka 5 6
+  cbc 7 8
+  ijk 9 10
+
+To retain only the lines with a key begining with 'aa' or ending with 'c', you
+can do:
+
+  \$ $0 '^aa' 'c\$' < foo
+  #col0 col1 col2
+  aab 1 2
+  aac 3 4
+  cbc 7 8
+
+Note that the first line is always keeped since it is the 'title' line.
+EOF
+}
+
+
+my $line;
+my @fields;
+my @lines;
+
+
+if (defined $ARGV[0] && ($ARGV[0] eq '-h' || $ARGV[0] eq '-?'
+			 || $ARGV[0] eq '--help')) {
+    printf usage();
+    exit 0;
+}
+
+if (scalar @ARGV <= 0) {
+    printf STDERR usage();
+    exit 1;
+}
+
+
+# First line process
+# Do not touch anything, just print it blindly since it is the title line.
+
+$line = <STDIN>;
+exit 0 unless (defined $line);
+printf $line;
+
+
+# Other lines process
+# Split the line in fields, and if the first field match any of the given
+# regex, then print the line.
+
+while (defined ($line = <STDIN>)) {
+    @fields = split /\s+/, $line;
+
+    foreach (@ARGV) {
+	if ($fields[0] =~ /$_/) {
+	    printf $line;
+	    last;
+	}
+    }
+}
