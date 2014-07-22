@@ -81,14 +81,14 @@ $op = shift;
 $name = shift;
 
 
+if (defined $op && ($op eq '-h' || $op eq '--help' || $op eq '-?')) {
+    printf usage();
+    exit 0;
+}
+
 if (!defined $op || !defined $name || scalar @ARGV <= 0) {
     printf STDERR usage();
     exit 1;
-}
-
-if ($op eq '-h' || $op eq '--help' || $op eq '-?') {
-    printf usage();
-    exit 0;
 }
 
 if (!defined &{\&{$op}}) {

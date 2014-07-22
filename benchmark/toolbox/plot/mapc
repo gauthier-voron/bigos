@@ -1,0 +1,147 @@
+#!/usr/bin/perl -wl
+use strict;
+
+
+sub usage
+{
+    return <<"EOF";
+usage: $0 OPERATION REGEX... < FILE
+
+Perform a map on the input data FILE, with the given OPERATION, on the
+columns matching given REGEXs, modifying them accordingly.
+For instance, given the file "foo":
+
+  \$ cat foo
+  #col0 col1 col2 other
+  aab 1 2 14
+  aac 3 4 2
+  aka 5 6 8
+  cbc 7 - 50
+  ijk 9 10 17
+
+To put the columns which begin by "col" in relative percentage , you can do:
+
+  \$ $0 percent '^col' < foo
+  #col0 col1 col2 other
+  aab 33.3 66.7 14
+  aac 42.9 57.1 2
+  aka 45.5 55.6 8
+  cbc 100 - 50
+  ijk 47.4 52.6 17
+
+Note that the produced column always go to the end. Also note than incomplete
+values are ignored here with the percent operation. When it is possible,
+incomplete values will be interpreted as the neutral element.
+
+Available operations are:
+  operation      meaning      neutral element
+  percent        percentage   0
+EOF
+}
+
+
+sub percent
+{
+    my $sum = 0;
+    my @ret;
+    $sum += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
+    foreach (@_) {
+	if ($_ eq '-') {
+	    push @ret, '-';
+	} elsif ($sum == 0) {
+	    push @ret, '-';
+	} else {
+	    push @ret, (($_ * 100) / $sum);
+	}
+    }
+    return @ret;
+}
+
+
+my $op;
+my $i;
+my $line;
+my $column;
+my @fields;
+my %columns;
+my @values;
+
+$op = shift;
+
+
+if (defined $op && ($op eq '-h' || $op eq '-?' || $op eq '--help')) {
+    printf usage();
+    exit 0;
+}
+
+if (!defined $op || scalar @ARGV <= 0) {
+    printf STDERR usage();
+    exit 1;
+}
+
+if (!defined &{\&{$op}}) {
+    printf STDERR usage();
+    exit 1;
+}
+
+
+$line = <STDIN>;
+exit 0 unless (defined $line);
+@fields = split /\s+/, $line;
+
+printf (shift @fields);
+
+
+# First line operation
+# Find the columns matching the regexs and store the column number in @columns
+# Print all the column headers.
+
+$i = 1;
+foreach $column (@fields) {
+    foreach (@ARGV) {
+	if ($column =~ /$_/) {
+	    $columns{$i} = 1;
+	    last;
+	}
+    }
+    printf ' ' . $column;
+    $i++;
+}
+print '';
+
+
+# Process each line in two phases:
+# First phase, find the fields of the columns stored in @columns: the one which
+# should be mapped and ut the values in a buffer.
+# Second phase, compute the map and for each field, if it is one af a mapped
+# column, put the mapped value, otherwise put the original one.
+
+while (defined ($line = <STDIN>)) {
+    @fields = split /\s+/, $line;
+    printf (shift @fields);
+    
+    @values = ();
+
+    $i = 0;
+    foreach (@fields) {
+	$i++;
+	if (defined $columns{$i}) {
+	    push @values, $_;
+	    next;
+	}
+    }
+
+    @values = &{\&{$op}}(@values);
+
+    $i = 0;
+    foreach (@fields) {
+	$i++;
+	if (defined $columns{$i}) {
+	    printf ' ' . (shift @values);
+	} else {
+	    printf ' ' . $_;
+	}
+    }
+
+    print '';
+}

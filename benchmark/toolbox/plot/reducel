@@ -2,21 +2,6 @@
 use strict;
 
 
-# input: op name regex... < file
-# example: sum total .* < FILE.dat
-# file:
-#   #col0 col1 col2
-#   aab 1 2
-#   aac 3 4
-#   aka 5 6
-#   cbc 7 8
-#   ijk 9 10
-#
-# output:
-#   #col0 col1 col2
-#   total 25 30
-
-
 sub usage
 {
     return <<"EOF";
