@@ -1,26 +1,68 @@
 #!/usr/bin/perl -wl
 use strict;
 
-my $NAME = shift;
-my @EVENTS = @ARGV;
-my ($me, $log, $pid);
-my @command;
-my %values;
 
-# Check if no name is given
-$NAME || exit 1;
+sub usage
+{
+    return <<"EOF";
+usage: $0 NAME PROGRAM EVENTS...
 
-# Check is root
-$me = `whoami`;
-chomp $me;
-$me eq 'root' or exit 1;
+Do a profiling of the given PROGRAM for the specified EVENTS. Store the results
+in a file NAME.log and at starting, stores its own pid in a file NAME.pid
 
-# Prepare the log and pid files
+Do the profiling until its is killed. WARNING: after is is killed, it may take
+several seconds for the profiling program to collect and format its data, so
+the log file or any temporary file should not be touched until the program is
+really dead.
+
+This program can only be run as root.
+EOF
+}
+
+
+my $NAME = shift;         # Base name of log and pid file
+my $PROG = shift;         # Name of the program to monitor
+my @EVENTS = @ARGV;       # Events to record
+
+my ($user, $log, $pid);   # Pid and log file descriptors + username variable
+my @command;              # Command for operf
+
+
+# Perform some lightweight checks on the arguments
+# Print the usage message and exit without error if the first argument is an
+# help request.
+
+if (defined $NAME && ($NAME eq '-h' || $NAME eq '-?' || $NAME eq '--help')) {
+    printf usage();
+    exit 0;
+}
+
+if (!defined $NAME || !defined $PROG || scalar @EVENTS <= 0) {
+    print STDERR "$0: invalid argument count";
+    printf STDERR usage();
+    exit 1;
+}
+
+$user = `whoami`;
+chomp $user;
+if ($user ne 'root') {
+    print STDERR "$0: not running as root";
+    printf STDERR usage();
+    exit 1;
+}
+
+
+# Prepare the pid file.
+
 open $pid, '>', "$NAME.pid" || exit 1;
 print $pid $$;
 close $pid;
 
-@command = qw(operf --system-wide);
+
+# Build the command to run, then fork and make the child exec the command
+# This is done instead of a 'system' to keep the pid of the operf process.
+
+@command = qw(operf --system-wide --lazy-conversion);
 foreach (@EVENTS) {
     push @command, '-e';
     push @command, $_;
@@ -31,44 +73,57 @@ unless ($pid) {
     exec @command;
 }
 
+
+# Redirecting signals sent to this very process to the operf process as a
+# SIGINT signal.
+# Wait this last process to terminate.
+
 $SIG{INT} = sub { kill 'INT', $pid };
 $SIG{QUIT} = sub { kill 'INT', $pid };
 $SIG{TERM} = sub { kill 'INT', $pid };
+
 waitpid $pid, 0;
 
+
+# Collect the data parsing the result of opreport.
+# Using the normal format instead of xml one because this is a perl script...
+
+my ($line, @events, @fields, %results);
+foreach $line (split "\n", `opreport`) {
+    foreach (@EVENTS) {                             # for each event
+	goto nomatch unless ($line =~ /^Counted/);  #  is this an event line ?
+
+	foreach (split ':', $_) {                   # for each field of the evt
+	    goto nomatch unless ($line =~ /$_/);    #  is the line matches ?
+	}
+	push @events, $_;                           # if so, store the event
+	goto match;                                 #  and go next line
+
+      nomatch:                                      # this is not an event line
+    }
+
+    if ($line =~ /$PROG/) {                         # is a program line ?
+	$line =~ s/^\s*(.*?)\s*$/$1/;               # remove heading spaces
+	@fields = split /\s+/, $line;               # split by spaces
+	while (scalar @events > 0) {                  # for each stored event
+	    $results{shift @events} = shift @fields;  # associate a raw value
+	    shift @fields;                            # forget the percent
+	}
+	last;
+    }
+
+  match:
+}
+
+
+# Once the data collected, put it in the .log file.
+# Avoid to lose data, so tar-gzip the oprofile data and then remove the
+# directory.
+
 open $log, '>', "$NAME.log";
-my ($binary, $count, $val);
-foreach (split "\n", `opreport --xml`) {
-    if (/^<binary\s+name="(.*)">$/) {
-        $binary = $1;
-    } elsif ($binary && /^<count.*>$/) {
-        $count = 1;
-    } elsif ($count && /^(\d+)<\/count>$/) {
-        $val = $1;
-        push @{$values{$binary}}, $val;
-    } else {
-        $binary = '';
-        $count = '';
-        $val = '';
-    }
-}
-foreach (keys %values) {
-    my $i = 0;
-    my $bin = $_;
-    foreach (@{$values{$bin}}) {
-        printf $log $bin . "($i) ";
-        $i++;
-    }
-}
-print $log '';
-
-foreach (keys %values) {
-    foreach (@{$values{$_}}) {
-        printf $log $_ . ' ';
-    }
-}
-print $log '';
-
-
+print $log "#time " . (join ' ', (sort keys %results));
+print $log "total " . (join ' ', (map { $results{$_} } (sort keys %results)));
 close $log;
+
+`tar -czf "$NAME.tgz" oprofile_data`;
 `rm -rf oprofile_data`
