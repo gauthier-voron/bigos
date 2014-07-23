@@ -1,0 +1,30 @@
+#!/usr/bin/perl -wl
+use strict;
+
+my $input;
+my $real;
+my $user;
+my $sys;
+
+if (scalar @ARGV >= 2) {
+    $input = $ARGV[1];
+    @ARGV = ($ARGV[0]);
+} elsif (scalar @ARGV == 1) {
+    $input = shift;
+} else {
+    $input = 'input_data';
+}
+
+while (<>) {
+    /^real\s*(\d+)m([.\d]+)s/ and $real = ($1 * 60) + $2;
+    /^user\s*(\d+)m([.\d]+)s/ and $user = ($1 * 60) + $2;
+    /^sys\s*(\d+)m([.\d]+)s/ and $sys = ($1 * 60) + $2;
+    if (defined $real && defined $user && defined $sys) {
+	last;
+    }
+}
+
+print "#type $input";
+print "real $real";
+print "user $user";
+print "sys $sys";
