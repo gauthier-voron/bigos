@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run swaptions on a native Linux with all machine resources.
+# Run streamcluster on a native Linux with all machine resources.
 
 error() {
     MSG=$1; shift
@@ -7,18 +7,18 @@ error() {
     exit 1
 }
 
-RESULTS=swaptions-interl.`date +'%Y-%m-%d-%H-%M-%S'`
+RESULTS=streamcluster-interl.`date +'%Y-%m-%d-%H-%M-%S'`
 
 mkdir "$RESULTS" || error "cannot mkdir '$RESULTS'"
 mkdir "$RESULTS/log" || error "cannot mkdir '$RESULTS/logs'"
-build-swaptions "$RESULTS/parsec" || exit 1
+build-streamcluster "$RESULTS/parsec" || exit 1
 
 cd "$RESULTS"
-cpurate log/cpu swaptions &
-memrate log/mem swaptions &
+cpurate log/cpu streamcluster &
+memrate log/mem streamcluster &
 numamem log/numa &
-oproperf log/oprof CPU_IO_REQUESTS_TO_MEMORY_IO:500:0xa8 CPU_IO_REQUESTS_TO_MEMORY_IO:500:0x98 &
-numactl --interleave=all swaptions parsec
+oproperf log/oprof streamcluster CPU_IO_REQUESTS_TO_MEMORY_IO:500:0xa8 CPU_IO_REQUESTS_TO_MEMORY_IO:500:0x98 &
+numactl --interleave=all streamcluster parsec
 kill `cat log/cpu.pid`
 kill `cat log/mem.pid`
 kill `cat log/numa.pid`

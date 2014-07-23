@@ -1,8 +1,0 @@
-<xen>
-  <monitor command="msrperf msr 3c:00 3c:01"/>
-  <domu name="xen-0" memory="128G" vcpus="48">
-    <monitor command="cpurate cpu streamcluster"/>
-    <monitor command="memrate mem streamcluster"/>
-    <run command="streamcluster native 48"/>
-  </domu>
-</xen>
