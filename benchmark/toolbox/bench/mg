@@ -1,0 +1,34 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+PARS=$1; shift
+DATA=$1; shift
+NTHR=$1; shift
+
+[ "x$PARS" = "x" ] && PARS='npb'
+[ "x$NTHR" = "x" ] && NTHR=`cat /proc/cpuinfo | grep processor | wc -l`
+
+[ "x$DATA" = "x" ] && DATA=native
+case $DATA in
+    native)
+	DATA=D
+	;;
+    simlarge)
+	DATA=C
+	;;
+    simsmall)
+	DATA=W
+	;;
+    *)
+	DATA=A
+	;;
+esac
+
+cd "$PARS" || error "cannot find '$PARS'"
+export OMP_NUM_THREAD=$NTHR
+(time NPB3.3-OMP/bin/mg.$DATA.x 2>&1) 2>&1 | tee run_${NTHR}_${DATA}.log

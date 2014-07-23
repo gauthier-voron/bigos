@@ -1,0 +1,35 @@
+#!/bin/sh
+
+error() {
+    MSG=$1; shift
+    echo "$0: $MSG" 1>&2
+    exit 1
+}
+
+ADDR="http://www.mnesic.fr/NPB3.3.1.tar.gz"
+TARZ="NPB3.3.1.tar.gz"
+PARS="NPB3.3.1"
+DEST=$1 ; shift
+[ "x$DEST" = "x" ] && DEST='npb'
+
+prev="$PWD"
+mkdir "$DEST" || error "cannot create '$DEST'"
+cd "$DEST"
+[ -e "/tmp/$TARZ" ] || curl "$ADDR" >"/tmp/$TARZ" \
+    || error "cannot download '$ADDR'"
+[ -e env.sh ] || tar -xzf "/tmp/$TARZ" || error "cannot extract '$TARZ'"
+[ -e env.sh ] || mv "$PARS/"* "$PARS"/.* . 2>/dev/null
+[ -e env.sh ] || rmdir "$PARS"
+
+rm Changes.log
+cd NPB3.3-OMP
+sed -r -e 's/F77\s*=\s*f77/F77 = gfortran/'  \
+       -e 's/F_LIB\s*=/F_LIB = -lgomp /'     \
+       -e 's/FFLAGS\s*=/FFLAGS = -fopenmp -mcmodel=large /' \
+  config/make.def.template > config/make.def
+make mg CLASS=W >/dev/null 2>/dev/null || error "cannot make mg CLASS=W"
+make mg CLASS=A >/dev/null 2>/dev/null || error "cannot make mg CLASS=A"
+make mg CLASS=B >/dev/null 2>/dev/null || error "cannot make mg CLASS=B"
+make mg CLASS=C >/dev/null 2>/dev/null || error "cannot make mg CLASS=C"
+make mg CLASS=D >/dev/null 2>/dev/null || error "cannot make mg CLASS=D"
+cd "$prev"
