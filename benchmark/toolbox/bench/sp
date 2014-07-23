@@ -16,7 +16,7 @@ NTHR=$1; shift
 [ "x$DATA" = "x" ] && DATA=native
 case $DATA in
     native)
-	DATA=E
+	DATA=D
 	;;
     simlarge)
 	DATA=C
