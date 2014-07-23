@@ -33,6 +33,7 @@ incomplete values will be interpreted as the neutral element.
 Available operations are:
   operation      meaning      neutral element
   avg            average      (empty)
+  med            median       (empty)
   sum            sum          0
   min            minimum      (empty)
   max            maximum      (empty)
@@ -46,6 +47,15 @@ sub avg
     $acc += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
     $acc /= scalar @_ - scalar (grep { $_ eq '-' } @_);
     return $acc;
+}
+
+sub med
+{
+    my @list = sort { $a > $b } grep { $_ ne '-' } @_;
+    my $size = scalar @list;
+    return '-' if ($size == 0);
+    return $list[$size/2] if ($size % 2 == 1);
+    return ($list[$size/2-1] + $list[$size/2]) / 2;
 }
 
 sub sum
