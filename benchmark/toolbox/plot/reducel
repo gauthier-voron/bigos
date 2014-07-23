@@ -34,6 +34,8 @@ Available operations are:
   operation      meaning      neutral element
   avg            average      (empty)
   sum            sum          0
+  min            minimum      (empty)
+  max            maximum      (empty)
 EOF
 }
 
@@ -51,6 +53,26 @@ sub sum
     my $acc = 0;
     $acc += $_ foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_);
     return $acc;
+}
+
+sub min
+{
+    my $min;
+    foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_) {
+	$min = $_ unless (defined $min);
+	$min = $_ if ($_ < $min);
+    }
+    return $min;
+}
+
+sub max
+{
+    my $max;
+    foreach (map { $_ = 0 if ($_ eq '-') ; $_ } @_) {
+	$max = $_ unless (defined $max);
+	$max = $_ if ($_ > $max);
+    }
+    return $max;
 }
 
 
