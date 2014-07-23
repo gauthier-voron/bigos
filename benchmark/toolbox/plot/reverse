@@ -1,0 +1,84 @@
+#!/usr/bin/perl -wl
+use strict;
+
+
+sub usage
+{
+    return <<"EOF";
+usage: $0 < FILE
+
+Reverse the given input data FILE so the lines become the columns and
+vice-versa. For instance, given the file 'foo':
+
+  \$ cat foo
+  #time col0 col1 col2
+  line0 0 1 2
+  line1 3 4 5
+  line2 6 7 8
+
+To reverse it, you can do:
+
+  \$ $0 < foo
+  #time line0 line1 line2
+  col0 0 3 6
+  col1 1 4 7
+  col2 2 5 8
+EOF
+}
+
+
+my $line;
+my @fields;
+my @columns;
+my %newlines;
+
+
+if (defined $ARGV[0]) {
+    if ($ARGV[0] eq '-h' || $ARGV[0] eq '-?' || $ARGV[0] eq '--help') {
+	printf usage();
+	exit 0;
+    }
+
+    if (defined $ARGV[1]) {
+	printf STDERR usage();
+	exit 1;
+    }
+}
+
+
+# First line process
+# Split all the fields and prepare the hashmap
+# We can already print the first column field since it do not move
+
+$line = <>;
+exit 0 unless (defined $line);
+@fields = split /\s+/, $line;
+
+printf (shift @fields);
+$newlines{$_} = [] foreach (@fields);
+push @columns, $_ foreach (@fields);
+
+
+# Other lines process
+# Split each line, the first field become the new column header, so print it,
+# the remainding fields are stored, in order in the hashmap.
+
+while (defined ($line = <>)) {
+    @fields = split /\s+/, $line;
+    
+    printf ' ' . (shift @fields);
+
+    foreach (0..(scalar @columns - 1)) {
+	push @{$newlines{$columns[$_]}}, $fields[$_];
+    }
+}
+print '';
+
+
+# All the data has been collected, so now print it, revesed.
+
+foreach (@columns) {
+    printf $_;
+    printf ' ' . $_ foreach (@{$newlines{$_}});
+    print '';
+}
