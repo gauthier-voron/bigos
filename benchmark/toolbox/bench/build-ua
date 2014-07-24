@@ -25,10 +25,10 @@ rm Changes.log
 cd NPB3.3-OMP
 sed -r -e 's/F77\s*=\s*f77/F77 = gfortran/'  \
        -e 's/F_LIB\s*=/F_LIB = -lgomp /'     \
-       -e 's/FFLAGS\s*=/FFLAGS = -fopenmp /' \
+       -e 's/FFLAGS\s*=/FFLAGS = -fopenmp -mcmodel=large /' \
   config/make.def.template > config/make.def
-make sp CLASS=W >/dev/null 2>/dev/null || error "cannot make dc CLASS=W"
-make sp CLASS=A >/dev/null 2>/dev/null || error "cannot make dc CLASS=A"
-make sp CLASS=B >/dev/null 2>/dev/null || error "cannot make dc CLASS=B"
-make sp CLASS=C >/dev/null 2>/dev/null || error "cannot make dc CLASS=C"
+make ua CLASS=W >/dev/null 2>/dev/null || error "cannot make ua CLASS=W"
+make ua CLASS=A >/dev/null 2>/dev/null || error "cannot make ua CLASS=A"
+make ua CLASS=B >/dev/null 2>/dev/null || error "cannot make ua CLASS=B"
+make ua CLASS=C >/dev/null 2>/dev/null || error "cannot make ua CLASS=C"
 cd "$prev"

@@ -31,5 +31,4 @@ esac
 
 cd "$PARS" || error "cannot find '$PARS'"
 export OMP_NUM_THREAD=$NTHR
-(time NPB3.3-OMP/bin/sp.$DATA.x 2>&1) 2>&1 | tee run_${NTHR}_${DATA}.log
-rm -rf ADC.*
+(time NPB3.3-OMP/bin/ua.$DATA.x 2>&1) 2>&1 | tee run_${NTHR}_${DATA}.log
