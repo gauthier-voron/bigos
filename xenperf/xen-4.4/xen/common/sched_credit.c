@@ -1655,23 +1655,33 @@ unsigned int measuring        = 0;
 unsigned int initialized      = 0;
 unsigned int max_domains      = 16;
 
-/* data table, on x : cpus, on y : domains, for more simple approach, we define a static maximum number of domains = 16 */
+/* data table, on bigos_regs_table[x][y] : x means domains and y means cpu, for an easier approach, we define a static maximum number of domains = 16 */
 unsigned long **bigos_regs_table;
+
 
 int
 __bigos_init_demux(
-	void)
+	unsigned long reg_addr)
 {
-	int i;
-	printk("__bigos_read_demux() called\n");
+	int i, j;
+	printk("__bigos_init_demux() called\n");
 	nr_cpus = num_online_cpus();
-	bigos_regs_table = xmalloc_array(unsigned long*,16);
-	for (i = 0 ; i < 16 ; i++){
-		bigos_regs_table[i] = xmalloc_array(unsigned long,nr_cpus);
-		if (bigos_regs_table[i] == NULL)
-			return 1;
+	bigos_regs_table = xmalloc_array(unsigned long* ,16);
+	if(bigos_regs_table == NULL){
+		printk("error : __bigos_init_demux could not allocate memory\n");
+		return 1;
 	}
-	initialized = 0;
+	for (i = 0 ; i < max_domains ; i++){
+		bigos_regs_table[i] = xmalloc_array(unsigned long,nr_cpus);
+		if (bigos_regs_table[i] == NULL){
+			printk("error : __bigos_init_demux could not allocate memory\n");
+			return 1;
+		}
+		for (j = 0 ; j < nr_cpus ; j++){
+			bigos_regs_table[i][j] = 0;
+		}
+	}
+	initialized = 1;
 	return 0;
 }
 
@@ -1680,54 +1690,105 @@ int
 bigos_init_demux(
 	unsigned long reg_addr)
 {
-	if (!initialized)
-		__bigos_init_demux();
-	current_reg_addr=(unsigned int)reg_addr;
+	if (!initialized){
+		if(__bigos_init_demux(reg_addr)){
+			printk("error : call to __init failed\n");
+			return 1;
+		}
+	}
+	current_reg_addr=(unsigned int)reg_addr; 
+	printk("bigos_init_demux called, reg_addr = %d\n",current_reg_addr);
 	measuring = 1;
 	return 0;
 }
+
+
+
 
 int
 bigos_stop_demux(
 	unsigned long reg_addr)
 {
+	int i, j;
 	measuring = 0;
-	/* TODO : see for desalloc of the table(s) */
+	for (i = 0 ; i < max_domains ; i++){
+		for (j = 0 ; j < nr_cpus ; j++){
+			bigos_regs_table[i][j] = 0;
+		}
+	}
 	return 0;
 }
+
+
 
 unsigned long
 bigos_read_demux(
 	unsigned long msr_addr, unsigned long domain)
 {
+	unsigned long result=0;
 	unsigned int cpu = smp_processor_id();
-	return bigos_regs_table[cpu][domain];
+
+	if(initialized && measuring){
+		printk("requested for domain %lu, cpu = %d, value : %lu\n",domain, cpu, bigos_regs_table[domain+1][cpu]);
+		result = bigos_regs_table[domain+1][cpu];
+		bigos_regs_table[domain+1][cpu] = 0;
+	}
+	return result;
 }
 
 
+
+/* hee */
 static int
 update_dom(
 	int cpu, domid_t next_vcpu_dom)
 {
 	struct csched_pcpu* cur_pcpu = CSCHED_PCPU(cpu);
+
+	/* "dom32767" seems to be default domid for XEN hypervisor, */
+	/* replace it to 0 and all other domid are + 1 than normally */	
+	if (next_vcpu_dom == 32767)
+		next_vcpu_dom = 0;
+	else
+		next_vcpu_dom += 1;
+ 		
+
 	if ( cur_pcpu->last_dom != next_vcpu_dom ){
 		/* We need to call the fonction to save the perf counters context 
 		   && save data in a table 
 		*/
+
 		if(measuring){
+
 			/* declare variables */
 			unsigned int reg_eax, reg_edx, reg_ecx;
 			reg_ecx = current_reg_addr;
+
 
 			/* call rdmsr */
 	    		asm volatile ("rdmsr"
                 			: "=a" (reg_eax), "=d" (reg_edx)
                 			: "c"  (reg_ecx));
 
+
 			/* save into table */
-			/* result = concatenation(edx, eax) */
-			/* bigos_regs_table[cpu][cur_pcpu->last_dom] = (((unsigned long) reg_edx)<<32) | (reg_eax);
-*/
+			/* result = previous + concatenation(edx, eax) */
+			bigos_regs_table[cur_pcpu->last_dom][cpu] += (((unsigned long) reg_edx)<<32) | (reg_eax & 0xffffffff);
+				
+			if(cpu == 1){
+				printk("value in the registers : ecx = Ox%08x, eax:edx = 0x%08x:0x%08x\n",reg_ecx, reg_eax, reg_edx);
+
+
+				printk("res = %lu, cpu = %d, curpcpu lastdom = %d\n\n",bigos_regs_table[cur_pcpu->last_dom][cpu], cpu, cur_pcpu->last_dom);
+			}
+
+
+
+/*			bigos_regs_table[cpu][cur_pcpu->last_dom] = (unsigned long) (((unsigned long) reg_edx)<<32) | (reg_eax); */
+/*			bigos_regs_table[cpu][cur_pcpu->last_dom] = (unsigned long) 2; */
+
+
+
 			/* reset counter value for further mesures */
 			reg_eax = 0;
 			reg_edx = 0;

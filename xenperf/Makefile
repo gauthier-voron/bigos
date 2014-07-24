@@ -70,7 +70,7 @@ xen: $(XEN-DIR)dist/install/boot/
 $(XEN-DIR)dist/install/boot/: $(shell find $(XEN) -name "*.c")
 	rsync -aAHXvz --exclude="*~" $(XEN) $(XEN-DIR)
 	make -C $(XEN-DIR) -j $(CORES_COMP) --no-print-directory xen
-#	sudo make -C $(XEN-DIR) -j $(NB_CORES) --no-print-directory install-xen
+	sudo make -C $(XEN-DIR) -j $(NB_CORES) --no-print-directory install-xen
 #	sudo reboot
 
 

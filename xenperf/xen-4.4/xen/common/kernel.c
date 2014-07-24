@@ -226,6 +226,7 @@ extern void bigos_stop_demux(unsigned long msr_addr);
 extern unsigned long bigos_read_demux(unsigned long msr_addr, 
                                        unsigned long domain); 
 
+
 /* extern void bigos_write_demux(unsigned long msr_addr, */
 /*                               unsigned long domain, */
 /*                               unsigned long value); */
@@ -242,18 +243,19 @@ struct bigos_register_set
 
 void bigos_do_rdmsr(struct bigos_register_set *regs)
 {
-    printk("RDMSR(ecx = 0x%08x, edx:eax = ", regs->ecx);
-    asm volatile ("rdmsr"
+/*    printk("RDMSR(ecx = 0x%08x, edx:eax = ", regs->ecx);
+*/    asm volatile ("rdmsr"
                   : "=a" (regs->eax), "=d" (regs->edx)
                   : "c"  (regs->ecx));
-    printk("0x%08x:%08x)\n", regs->edx, regs->eax);
+/*    printk("0x%08x:%08x)\n", regs->edx, regs->eax);
+*/
 }
 
 void bigos_do_wrmsr(const struct bigos_register_set *regs)
 {
-    printk("WRMSR(ecx = 0x%08x, edx:eax = 0x%08x:%08x)\n",
+/*    printk("WRMSR(ecx = 0x%08x, edx:eax = 0x%08x:%08x)\n",
            regs->ecx, regs->edx, regs->eax);
-    asm volatile ("wrmsr"
+*/    asm volatile ("wrmsr"
                   :
                   : "a" (regs->eax), "c" (regs->ecx), "d" (regs->edx));
 }
@@ -263,8 +265,8 @@ unsigned int bigos_count_domain(void)
 {
     return 2;
 }
-
-/*void bigos_init_demux(unsigned long msr_addr)
+/*
+void bigos_init_demux(unsigned long msr_addr)
 {
 }
 
@@ -281,6 +283,7 @@ unsigned long bigos_read_demux(unsigned long msr_addr,
     return (((unsigned long) regs.edx) << 32) | (regs.eax & 0xffffffff);
 }
 */
+
 void bigos_write_demux(unsigned long msr_addr,
                        unsigned long domain,
                        unsigned long value)
@@ -350,13 +353,20 @@ int bigos_rdmsr(int cmd, XEN_GUEST_HANDLE_PARAM(void) arg)
         return -EFAULT;
     domain = regs.ebx;
 
-    if (domain == 0) {
+/*    if (domain == 0) {
         bigos_do_rdmsr(&regs);
     } else {
         value = bigos_read_demux(regs.ecx, domain);
         regs.edx = value >> 32;
         regs.eax = value & 0xffffffff;
     }
+*/
+
+
+    value = bigos_read_demux(regs.ecx, domain);
+    regs.edx = value >> 32;
+    regs.eax = value & 0xffffffff;
+ 
 
     if (copy_to_guest(arg, &regs, 1))
         return -EFAULT;
