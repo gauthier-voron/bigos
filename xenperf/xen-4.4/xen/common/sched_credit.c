@@ -1773,13 +1773,13 @@ update_dom(
 
 			/* save into table */
 			/* result = previous + concatenation(edx, eax) */
-			bigos_regs_table[cur_pcpu->last_dom][cpu] += (((unsigned long) reg_edx)<<32) | (reg_eax & 0xffffffff);
+			bigos_regs_table[cur_pcpu->last_dom][cpu] += (((unsigned long) reg_edx)<<32) | (reg_eax);
 				
 			if(cpu == 1){
-				printk("value in the registers : ecx = Ox%08x, eax:edx = 0x%08x:0x%08x\n",reg_ecx, reg_eax, reg_edx);
+				printk("value in the registers : edx:eax = 0x%08x:0x%08x, nextvcpudom = %d\n", reg_edx, reg_eax, next_vcpu_dom);
 
 
-				printk("res = %lu, cpu = %d, curpcpu lastdom = %d\n\n",bigos_regs_table[cur_pcpu->last_dom][cpu], cpu, cur_pcpu->last_dom);
+				printk("res = %lu, value in the table = %lu, cpu = %d, curpcpu lastdom = %d\n\n",(((unsigned long) reg_edx)<<32) | (reg_eax),bigos_regs_table[cur_pcpu->last_dom][cpu], cpu, cur_pcpu->last_dom);
 			}
 
 
