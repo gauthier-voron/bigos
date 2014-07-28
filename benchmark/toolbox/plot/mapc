@@ -34,8 +34,9 @@ values are ignored here with the percent operation. When it is possible,
 incomplete values will be interpreted as the neutral element.
 
 Available operations are:
-  operation      meaning      neutral element
-  percent        percentage   0
+  operation      meaning                                   neutral element
+  percent        percentage                                0
+  speedup        improvement over first matching column    -
 EOF
 }
 
@@ -52,6 +53,21 @@ sub percent
 	    push @ret, '-';
 	} else {
 	    push @ret, (($_ * 100) / $sum);
+	}
+    }
+    return @ret;
+}
+
+sub speedup
+{
+    my @ret;
+    foreach (@_) {
+	if ($_ eq '-' || $_[0] == 0) {
+	    push @ret, '-';
+	} elsif ($_[0] eq '-') {
+	    push @ret, '-';
+	} else {
+	    push @ret, ((($_[0] / $_) - 1) * 100);
 	}
     }
     return @ret;
