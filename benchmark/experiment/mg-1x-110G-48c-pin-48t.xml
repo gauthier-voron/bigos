@@ -1,0 +1,8 @@
+<xen>
+  <monitor command="msrperf msr e9:a8 e9:98"/>
+  <domu name="xen-0" memory="110G" vcpus="48" pin="{0..47}" size="60G">
+      <monitor command="cpurate cpu mg"/>
+      <monitor command="memrate mem mg"/>
+      <run command="mg native 48"/>
+  </domu>
+</xen>

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run streamcluster on a native Linux with all machine resources.
+# Run sp on a native Linux with all machine resources.
 
 error() {
     MSG=$1; shift
@@ -7,14 +7,14 @@ error() {
     exit 1
 }
 
-RESULTS=streamcluster-interl.`date +'%Y-%m-%d-%H-%M-%S'`
+RESULTS=sp-interl.`date +'%Y-%m-%d-%H-%M-%S'`
 
 mkdir "$RESULTS" || error "cannot mkdir '$RESULTS'"
 mkdir "$RESULTS/log" || error "cannot mkdir '$RESULTS/logs'"
-build-streamcluster "$RESULTS/npb" || exit 1
+build-sp "$RESULTS/npb" || exit 1
 
 cd "$RESULTS"
-perf stat -a -o log/perf.log -e ra8e9,r98e9 numactl --interleave=all streamcluster npb
+perf stat -a -o log/perf.log -e ra8e9,r98e9 numactl --interleave=all sp npb
 
 mv `find npb/ -name "*.log"` log
 
