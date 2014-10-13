@@ -39,6 +39,26 @@
 #define UMASK_NBREQT_LOCLOC       (0xa0)  /*   local to local */
 #define SCOPE_NBREQT              SCOPE_NODE
 
+#define EVENT_DTLBL1MISS          (0x45)  /* l1 dtlb miss but l2 dtlb hit */
+#define UMASK_DTLBL1MISS_4K       (0x01)  /*   on 4Kb entry */
+#define UMASK_DTLBL1MISS_2M       (0x02)  /*   on 2Mb entry */
+#define UMASK_DTLBL1MISS_1G       (0x04)  /*   on 1Gb entry */
+#define SCOPE_DTLBL1MISS          SCOPE_CORE
+
+#define EVENT_DTLBL2MISS          (0x46)  /* l1 dtlb miss and l2 dtlb miss */
+#define UMASK_DTLBL2MISS_4K       (0x01)  /*   on 4Kb entry */
+#define UMASK_DTLBL2MISS_2M       (0x02)  /*   on 2Mb entry */
+#define UMASK_DTLBL2MISS_1G       (0x04)  /*   on 1Gb entry */
+#define SCOPE_DTLBL2MISS          SCOPE_CORE
+
+#define EVENT_ITLBL1MISS          (0x84)  /* l1 itlb miss but l2 itlb hit */
+#define SCOPE_ITLBL1MISS          SCOPE_CORE
+
+#define EVENT_ITLBL2MISS          (0x85)  /* l1 itlb miss and l2 itlb miss */
+#define UMASK_ITLBL2MISS_4K       (0x01)  /*   on 4Kb entry */
+#define UMASK_ITLBL2MISS_2M       (0x02)  /*   on 2Mb entry */
+#define SCOPE_ITLBL2MISS          SCOPE_CORE
+
 
 
 struct perfevt

@@ -39,6 +39,28 @@ struct perfevt all_events[] = {
 			     "local to remote", "local to local", NULL }
 	},
 
+        { EVENT_DTLBL1MISS, "l1 dtlb miss but l2 dtlb hit", SCOPE_DTLBL1MISS,
+          (unsigned long []) { UMASK_DTLBL1MISS_4K, UMASK_DTLBL1MISS_2M,
+                               UMASK_DTLBL1MISS_1G, 0 },
+          (const char *[]) { "4Kb entry", "2Mb entry", "1Gb entry", NULL }
+        },
+
+        { EVENT_DTLBL2MISS, "l1 dtlb miss and l2 dtlb miss", SCOPE_DTLBL2MISS,
+          (unsigned long []) { UMASK_DTLBL2MISS_4K, UMASK_DTLBL2MISS_2M,
+                               UMASK_DTLBL2MISS_1G, 0 },
+          (const char *[]) { "4Kb entry", "2Mb entry", "1Gb entry", NULL }
+        },
+
+        { EVENT_ITLBL1MISS, "l1 itlb miss but l2 itlb miss", SCOPE_ITLBL1MISS,
+          (unsigned long []) { 0 },
+          (const char *[]) { NULL }
+        },
+
+        { EVENT_ITLBL2MISS, "l1 itlb miss and l2 itlb miss", SCOPE_ITLBL2MISS,
+          (unsigned long []) { UMASK_ITLBL2MISS_4K, UMASK_ITLBL2MISS_2M, 0 },
+          (const char *[]) { "4Kb entry", "2Mb entry", NULL }
+        },
+
 	{ 0, NULL, 0, NULL, NULL }
 };
 

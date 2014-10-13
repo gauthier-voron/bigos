@@ -32,6 +32,10 @@ int __legacy_hasevt(const struct perfcnt *this __unused, unsigned long evt)
 	case EVENT_BRINST:
 	case EVENT_BRMISS:
 	case EVENT_NBREQT:
+        case EVENT_DTLBL1MISS:
+        case EVENT_DTLBL2MISS:
+        case EVENT_ITLBL1MISS:
+        case EVENT_ITLBL2MISS:
 		return 1;
 	default:
 		return 0;
